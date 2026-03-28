@@ -4,29 +4,61 @@ const fs = require('fs');
 const matter = require('gray-matter');
 const { marked } = require('marked');
 const chokidar = require('chokidar');
+const config = require('./config');
 
 const app = express();
-const PORT = process.env.PORT || 3890;
-const SESSIONS_DIR = path.resolve(process.env.SESSIONS_DIR || path.join(__dirname, '..', '.claude', 'sessions'));
+app.use(express.json());
 
-// Track connected SSE clients for live reload
+const PORT = (() => {
+  const cfg = config.loadConfig();
+  return process.env.PORT || cfg.port || 3890;
+})();
+
+// --- SSE clients for live reload ---
 const clients = new Set();
 
-// Watch session files for changes
-const watcher = chokidar.watch(SESSIONS_DIR, {
-  ignoreInitial: true,
-  ignored: /(^|[\/\\])\../,
-});
-
-watcher.on('all', () => {
+function notifyClients() {
   for (const client of clients) {
     client.write(`data: reload\n\n`);
   }
-});
+}
 
+// --- File watcher management ---
+let watcher = null;
+
+function buildWatcher() {
+  if (watcher) {
+    watcher.close();
+  }
+
+  const paths = config.getWatchPaths();
+  if (paths.length === 0) {
+    watcher = null;
+    return;
+  }
+
+  // Ensure all directories exist
+  for (const p of paths) {
+    if (!fs.existsSync(p)) {
+      fs.mkdirSync(p, { recursive: true });
+    }
+  }
+
+  watcher = chokidar.watch(paths, {
+    ignoreInitial: true,
+    ignored: /(^|[\/\\])\../,
+    depth: 1,
+  });
+
+  watcher.on('all', () => notifyClients());
+}
+
+buildWatcher();
+
+// --- Static files ---
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
-// SSE endpoint for live reload
+// --- SSE endpoint ---
 app.get('/api/events', (req, res) => {
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
@@ -37,8 +69,146 @@ app.get('/api/events', (req, res) => {
   req.on('close', () => clients.delete(res));
 });
 
-// Parse a single session markdown file
-function parseSessionFile(filePath) {
+// --- Config API ---
+app.get('/api/config', (req, res) => {
+  const cfg = config.loadConfig();
+  res.json({
+    configured: config.isConfigured(),
+    ...cfg,
+  });
+});
+
+app.post('/api/config', (req, res) => {
+  const { mode, sharedFolder, watchFolders, port } = req.body;
+
+  // Allow reset (mode: null)
+  if (mode === null) {
+    const saved = config.saveConfig({ mode: null, sharedFolder: '', watchFolders: [], port: port || 3890 });
+    buildWatcher();
+    return res.json({ success: true, config: saved });
+  }
+
+  if (!mode || !['shared', 'individual'].includes(mode)) {
+    return res.status(400).json({ error: 'mode must be "shared" or "individual"' });
+  }
+
+  if (mode === 'shared' && !sharedFolder) {
+    return res.status(400).json({ error: 'sharedFolder is required for shared mode' });
+  }
+
+  if (mode === 'individual' && (!watchFolders || watchFolders.length === 0)) {
+    return res.status(400).json({ error: 'At least one folder is required for individual mode' });
+  }
+
+  // Validate and resolve paths
+  const warnings = [];
+
+  if (mode === 'shared') {
+    const { resolved, exists } = config.validateFolderPath(sharedFolder);
+    if (!exists) {
+      try {
+        fs.mkdirSync(resolved, { recursive: true });
+      } catch {
+        warnings.push(`Could not create folder: ${resolved}`);
+      }
+    }
+  }
+
+  if (mode === 'individual') {
+    for (const folder of watchFolders) {
+      const { resolved, exists } = config.validateFolderPath(folder);
+      if (!exists) {
+        try {
+          fs.mkdirSync(resolved, { recursive: true });
+        } catch {
+          warnings.push(`Could not create folder: ${resolved}`);
+        }
+      }
+    }
+  }
+
+  const saved = config.saveConfig({
+    mode,
+    sharedFolder: mode === 'shared' ? sharedFolder : '',
+    watchFolders: mode === 'individual' ? watchFolders : [],
+    port: port || 3890,
+  });
+
+  buildWatcher();
+  notifyClients();
+
+  res.json({ success: true, config: saved, warnings });
+});
+
+app.post('/api/config/folders', (req, res) => {
+  const { path: folderPath } = req.body;
+  if (!folderPath) {
+    return res.status(400).json({ error: 'path is required' });
+  }
+
+  const cfg = config.loadConfig();
+  if (cfg.mode !== 'individual') {
+    return res.status(400).json({ error: 'Can only add folders in individual mode' });
+  }
+
+  const { resolved, exists } = config.validateFolderPath(folderPath);
+  if (!exists) {
+    try {
+      fs.mkdirSync(resolved, { recursive: true });
+    } catch {
+      // folder might be created later
+    }
+  }
+
+  if (!cfg.watchFolders.includes(resolved)) {
+    cfg.watchFolders.push(resolved);
+    config.saveConfig(cfg);
+    buildWatcher();
+    notifyClients();
+  }
+
+  res.json({ success: true, watchFolders: cfg.watchFolders });
+});
+
+app.delete('/api/config/folders', (req, res) => {
+  const { path: folderPath } = req.body;
+  if (!folderPath) {
+    return res.status(400).json({ error: 'path is required' });
+  }
+
+  const cfg = config.loadConfig();
+  if (cfg.mode !== 'individual') {
+    return res.status(400).json({ error: 'Can only remove folders in individual mode' });
+  }
+
+  const resolved = path.resolve(folderPath);
+  cfg.watchFolders = cfg.watchFolders.filter(f => path.resolve(f) !== resolved);
+  config.saveConfig(cfg);
+  buildWatcher();
+  notifyClients();
+
+  res.json({ success: true, watchFolders: cfg.watchFolders });
+});
+
+// --- Session parsing ---
+function parseActivityLog(content) {
+  const logSection = content.match(/## Activity Log\n([\s\S]*?)(?=\n## |\n*$)/);
+  if (!logSection) return [];
+
+  const entries = [];
+  const entryRegex = /### \[([^\]]+)\]\s*(.+)\n([\s\S]*?)(?=\n### \[|$)/g;
+  let match;
+  while ((match = entryRegex.exec(logSection[1])) !== null) {
+    entries.push({
+      timestamp: match[1].trim(),
+      title: match[2].trim(),
+      body: match[3].trim(),
+    });
+  }
+  return entries;
+}
+
+function parseSessionFile(filePath, sourceFolder) {
   const raw = fs.readFileSync(filePath, 'utf-8');
   const { data: frontmatter, content } = matter(raw);
 
@@ -50,42 +220,59 @@ function parseSessionFile(filePath) {
   // Extract sections
   const sections = {};
   const sectionRegex = /^## (.+)$/gm;
-  let match;
+  let m;
   const sectionPositions = [];
-  while ((match = sectionRegex.exec(content)) !== null) {
-    sectionPositions.push({ name: match[1], start: match.index + match[0].length });
+  while ((m = sectionRegex.exec(content)) !== null) {
+    sectionPositions.push({ name: m[1], start: m.index + m[0].length });
   }
   for (let i = 0; i < sectionPositions.length; i++) {
-    const end = i + 1 < sectionPositions.length ? sectionPositions[i + 1].start - sectionPositions[i + 1].name.length - 3 : content.length;
-    const sectionContent = content.slice(sectionPositions[i].start, end).trim();
-    sections[sectionPositions[i].name] = sectionContent;
+    const end = i + 1 < sectionPositions.length
+      ? sectionPositions[i + 1].start - sectionPositions[i + 1].name.length - 3
+      : content.length;
+    sections[sectionPositions[i].name] = content.slice(sectionPositions[i].start, end).trim();
   }
+
+  // Parse activity log
+  const activityLog = parseActivityLog(content);
+
+  // Source folder label
+  const sourceName = sourceFolder ? path.basename(path.resolve(sourceFolder, '..', '..')) || path.basename(sourceFolder) : '';
 
   return {
     file: path.basename(filePath),
+    sourceFolder: sourceFolder || '',
+    sourceName,
     ...frontmatter,
     progress: frontmatter.progress ?? (tasksTotal > 0 ? Math.round((tasksDone / tasksTotal) * 100) : 0),
     tasks: { done: tasksDone, total: tasksTotal },
     sections,
+    activityLog,
     html: marked(content),
   };
 }
 
-// GET all sessions
+// --- Session API ---
 app.get('/api/sessions', (req, res) => {
-  if (!fs.existsSync(SESSIONS_DIR)) {
+  const watchPaths = config.getWatchPaths();
+
+  if (watchPaths.length === 0) {
     return res.json([]);
   }
 
-  const files = fs.readdirSync(SESSIONS_DIR).filter(f => f.endsWith('.md'));
-  const sessions = files.map(f => {
-    try {
-      return parseSessionFile(path.join(SESSIONS_DIR, f));
-    } catch (err) {
-      console.error(`Error parsing ${f}:`, err.message);
-      return null;
+  const sessions = [];
+
+  for (const dir of watchPaths) {
+    if (!fs.existsSync(dir)) continue;
+
+    const files = fs.readdirSync(dir).filter(f => f.endsWith('.md'));
+    for (const f of files) {
+      try {
+        sessions.push(parseSessionFile(path.join(dir, f), dir));
+      } catch (err) {
+        console.error(`Error parsing ${f} in ${dir}:`, err.message);
+      }
     }
-  }).filter(Boolean);
+  }
 
   // Sort by updated_at descending
   sessions.sort((a, b) => {
@@ -97,21 +284,41 @@ app.get('/api/sessions', (req, res) => {
   res.json(sessions);
 });
 
-// GET single session
 app.get('/api/sessions/:file', (req, res) => {
-  const filePath = path.join(SESSIONS_DIR, req.params.file);
-  if (!filePath.startsWith(SESSIONS_DIR) || !fs.existsSync(filePath)) {
-    return res.status(404).json({ error: 'Session not found' });
+  const sourceFolder = req.query.source;
+  const watchPaths = config.getWatchPaths();
+
+  // Search in specific folder or all folders
+  const searchPaths = sourceFolder ? [sourceFolder] : watchPaths;
+
+  for (const dir of searchPaths) {
+    const resolved = path.resolve(dir);
+    const filePath = path.join(resolved, req.params.file);
+
+    // Path traversal protection
+    if (!filePath.startsWith(resolved)) continue;
+    if (!fs.existsSync(filePath)) continue;
+
+    try {
+      return res.json(parseSessionFile(filePath, dir));
+    } catch (err) {
+      return res.status(500).json({ error: err.message });
+    }
   }
-  try {
-    res.json(parseSessionFile(filePath));
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+
+  res.status(404).json({ error: 'Session not found' });
 });
 
 app.listen(PORT, () => {
-  console.log(`\n  🔍 Claude Session Tracker`);
-  console.log(`  ➜ http://localhost:${PORT}`);
-  console.log(`  📁 Watching: ${SESSIONS_DIR}\n`);
+  const configured = config.isConfigured();
+  console.log(`\n  Claude Session Tracker`);
+  console.log(`  http://localhost:${PORT}`);
+  if (configured) {
+    const paths = config.getWatchPaths();
+    console.log(`  Watching ${paths.length} folder(s):`);
+    paths.forEach(p => console.log(`    ${p}`));
+  } else {
+    console.log(`  First run — open the app to configure`);
+  }
+  console.log('');
 });

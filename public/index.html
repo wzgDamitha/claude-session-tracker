@@ -7,33 +7,98 @@
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-  <header>
-    <div class="header-content">
+  <!-- Setup Wizard (first run) -->
+  <div class="wizard-overlay" id="wizard-overlay">
+    <div class="wizard-card">
       <h1>Claude Session Tracker</h1>
-      <div class="header-stats" id="header-stats"></div>
-    </div>
-  </header>
+      <p class="wizard-subtitle">Choose how sessions report their progress.</p>
 
-  <main>
-    <div class="filters" id="filters">
-      <button class="filter-btn active" data-filter="all">All</button>
-      <button class="filter-btn" data-filter="in_progress">In Progress</button>
-      <button class="filter-btn" data-filter="completed">Completed</button>
-      <button class="filter-btn" data-filter="blocked">Blocked</button>
-      <button class="filter-btn" data-filter="failed">Failed</button>
-    </div>
+      <!-- Step 1: Mode -->
+      <div class="wizard-step" id="wizard-step-mode">
+        <div class="wizard-modes">
+          <button class="wizard-mode-btn" data-mode="shared">
+            <div class="mode-icon">&#128193;</div>
+            <div class="mode-title">Shared Folder</div>
+            <div class="mode-desc">All Claude Code sessions write to one shared folder. Best when all sessions can access the same path.</div>
+          </button>
+          <button class="wizard-mode-btn" data-mode="individual">
+            <div class="mode-icon">&#128194;</div>
+            <div class="mode-title">Individual Folders</div>
+            <div class="mode-desc">Each project has its own session folder. Add multiple paths and the dashboard aggregates them all.</div>
+          </button>
+        </div>
+      </div>
 
-    <div class="sessions-grid" id="sessions-grid">
-      <div class="empty-state" id="empty-state">
-        <div class="empty-icon">📋</div>
-        <h2>No sessions yet</h2>
-        <p>Add session markdown files to <code>.claude/sessions/</code> to get started.</p>
-        <p class="hint">See <code>SESSION_TEMPLATE.md</code> for the expected format.</p>
+      <!-- Step 2: Folder paths -->
+      <div class="wizard-step hidden" id="wizard-step-paths">
+        <button class="wizard-back" id="wizard-back">&larr; Back</button>
+
+        <!-- Shared mode input -->
+        <div id="wizard-shared" class="hidden">
+          <label class="wizard-label">Shared sessions folder path:</label>
+          <input type="text" id="wizard-shared-input" class="wizard-input" placeholder="e.g. F:\Future\Claude Project Tracker\.claude\sessions">
+          <p class="wizard-hint">All agents will write session files here. The folder will be created if it doesn't exist.</p>
+        </div>
+
+        <!-- Individual mode input -->
+        <div id="wizard-individual" class="hidden">
+          <label class="wizard-label">Add session folder paths:</label>
+          <div class="wizard-folder-add">
+            <input type="text" id="wizard-folder-input" class="wizard-input" placeholder="e.g. C:\Projects\my-app\.claude\sessions">
+            <button class="wizard-add-btn" id="wizard-add-btn">Add</button>
+          </div>
+          <ul class="wizard-folder-list" id="wizard-folder-list"></ul>
+          <p class="wizard-hint">Add one or more folders. Each project's .claude/sessions directory is a common choice.</p>
+        </div>
+
+        <button class="wizard-save-btn" id="wizard-save-btn">Save &amp; Start</button>
+        <div class="wizard-error hidden" id="wizard-error"></div>
       </div>
     </div>
-  </main>
+  </div>
 
-  <!-- Session detail modal -->
+  <!-- Main Dashboard -->
+  <div id="app" class="hidden">
+    <header>
+      <div class="header-content">
+        <h1>Claude Session Tracker</h1>
+        <div class="header-right">
+          <div class="header-stats" id="header-stats"></div>
+          <button class="settings-btn" id="settings-btn" title="Settings">&#9881;</button>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <div class="filters" id="filters">
+        <button class="filter-btn active" data-filter="all">All</button>
+        <button class="filter-btn" data-filter="in_progress">In Progress</button>
+        <button class="filter-btn" data-filter="completed">Completed</button>
+        <button class="filter-btn" data-filter="blocked">Blocked</button>
+        <button class="filter-btn" data-filter="failed">Failed</button>
+      </div>
+
+      <div class="sessions-grid" id="sessions-grid">
+        <div class="empty-state" id="empty-state">
+          <div class="empty-icon">&#128203;</div>
+          <h2>No sessions yet</h2>
+          <p>Session reports will appear here once agents start writing them.</p>
+          <p class="hint">Share <code>claude-session-track.md</code> with your Claude Code sessions to get started.</p>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Settings Modal -->
+  <div class="modal-overlay" id="settings-overlay">
+    <div class="modal settings-modal">
+      <button class="modal-close" id="settings-close">&times;</button>
+      <h2>Settings</h2>
+      <div id="settings-body"></div>
+    </div>
+  </div>
+
+  <!-- Session Detail Modal -->
   <div class="modal-overlay" id="modal-overlay">
     <div class="modal" id="modal">
       <button class="modal-close" id="modal-close">&times;</button>

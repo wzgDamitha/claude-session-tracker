@@ -1,7 +1,6 @@
 # Session Report Template
 
-Each Claude Code session agent should write a markdown file to `.claude/sessions/` using this format.
-The filename should be: `<session-id>.md` (e.g., `session-abc123.md`)
+Each Claude Code session agent should write a markdown file using this format.
 
 ---
 
@@ -15,6 +14,7 @@ started_at: "2026-03-28T10:00:00Z"
 updated_at: "2026-03-28T11:30:00Z"
 agent_model: "claude-opus-4-6"
 repository: "myorg/myrepo"
+update_mode: "auto"            # auto | manual | budget
 tags: ["auth", "backend", "security"]
 progress: 65                   # 0-100
 ---
@@ -41,17 +41,19 @@ Brief description of what this session is trying to accomplish.
 ## Blockers
 _None currently._
 
+## Activity Log
+### [2026-03-28 10:00:00] Session started
+Beginning work on authentication feature.
+
+### [2026-03-28 10:15:00] Completed: Review auth middleware
+Reviewed existing session-based auth. Will replace with JWT.
+
+### [2026-03-28 10:45:00] Completed: JWT utility
+Created sign/verify functions using RS256.
+
+### [2026-03-28 11:30:00] In progress: Login endpoint
+Working on credential validation and token response.
+
 ## Notes
 Working smoothly. Refresh token logic is next.
-```
-
-## How to Use
-
-Add this to your `CLAUDE.md` or session instructions:
-
-```
-Before ending your session, write a detailed session report to
-.claude/sessions/<session-id>.md following the template in SESSION_TEMPLATE.md.
-Include your session ID, current status, progress percentage, completed/pending
-tasks, files changed, and any blockers.
 ```

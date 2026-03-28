@@ -1,54 +1,51 @@
 # Claude Session Tracker — Agent Instructions
 
 > **You are reading this because a user has asked you to track your session progress.**
-> Follow every instruction in this file carefully.
+> Follow every instruction in this file. This is a BLOCKING REQUIREMENT.
 
 ---
 
-## Your Task
-
-You must write and maintain a **session progress report** as a markdown file while you work. This file is read by a dashboard app that visualizes your progress for the user.
-
----
-
-## Output Folder
+## 1. Output Folder
 
 Save your session report to:
 
 ```
-F:\Future\Claude Project Tracker\.claude\sessions\
+__SESSION_FOLDER_PATH__
 ```
 
-> **If the user told you to use a different folder, use that instead.**
+> **The user MUST tell you which folder to use.** If they haven't, ask them before proceeding.
+> The folder should already exist. If it doesn't, create it.
 
 ---
 
-## Filename
+## 2. Update Mode
 
-Name your file using your session ID:
+The user will tell you which update mode to use. If they don't specify, default to **manual**.
+
+| Mode       | What You Do                                                    | Token Cost |
+|------------|----------------------------------------------------------------|------------|
+| **auto**   | Update the report after **every prompt/response** cycle        | Higher     |
+| **manual** | Update **only** when the user asks (e.g., "update tracker")   | Medium     |
+| **budget** | Update **twice**: once at session start, once at session end   | Lowest     |
+
+---
+
+## 3. Filename
 
 ```
 <session-id>.md
 ```
 
 - Use your session ID from the conversation URL (e.g., `session_015WXoyPeSg5LLXjwMqzqnYM.md`)
-- If you can't determine your session ID, use a descriptive name: `session-<short-task-description>.md` (e.g., `session-fix-login-bug.md`)
+- If unknown, use: `session-<short-task-description>.md`
+
+**Never create duplicate files. Always update the same file.**
 
 ---
 
-## When to Write
+## 4. File Format
 
-1. **At the start** of your session — create the file with `status: "in_progress"` and `progress: 0`
-2. **During work** — update the file after completing significant tasks (update `progress`, check off tasks, add to Changes Made)
-3. **At the end** of your session — do a final update with accurate `status`, `progress`, and all completed/pending tasks
-
-**Always update the same file. Never create duplicates.**
-
----
-
-## File Format
-
-Use this exact structure with YAML frontmatter followed by markdown sections:
+Use this exact structure — YAML frontmatter + markdown sections:
 
 ```markdown
 ---
@@ -60,6 +57,7 @@ started_at: "2026-03-28T10:00:00Z"
 updated_at: "2026-03-28T11:30:00Z"
 agent_model: "claude-opus-4-6"
 repository: "owner/repo-name"
+update_mode: "auto"
 tags: ["relevant", "tags"]
 progress: 50
 ---
@@ -75,14 +73,26 @@ One or two sentences explaining what this session is accomplishing.
 
 ## Changes Made
 - `path/to/file.ts` — What was changed and why
-- `path/to/other-file.ts` — Description of change
+- `path/to/other.ts` — Description of change
 
 ## Key Decisions
 - Decision made and brief reasoning
-- Another decision and why
 
 ## Blockers
 _None._
+
+## Activity Log
+### [2026-03-28 10:00:00] Session started
+Beginning work on user authentication feature.
+
+### [2026-03-28 10:15:00] Completed: Review existing auth code
+Reviewed middleware in `src/middleware/auth.ts`. Found it uses deprecated session-based approach.
+
+### [2026-03-28 10:32:00] Completed: Implement JWT utility
+Created `src/auth/jwt.ts` with sign/verify functions using RS256.
+
+### [2026-03-28 10:45:00] In progress: Login endpoint
+Working on POST /api/login with credential validation.
 
 ## Notes
 Any additional context, next steps, or handoff notes.
@@ -90,70 +100,75 @@ Any additional context, next steps, or handoff notes.
 
 ---
 
-## Field Reference
+## 5. Field Reference
 
 | Field          | Required | Values / Format                                                  |
 |----------------|----------|------------------------------------------------------------------|
 | `session_id`   | Yes      | Your session ID or unique identifier                             |
-| `title`        | Yes      | Brief title for the dashboard card (keep under 60 chars)         |
+| `title`        | Yes      | Brief title for dashboard card (under 60 chars)                  |
 | `branch`       | Yes      | Git branch you're working on                                     |
 | `status`       | Yes      | `not_started` · `in_progress` · `blocked` · `completed` · `failed` |
-| `started_at`   | Yes      | ISO 8601 timestamp (when you started)                            |
-| `updated_at`   | Yes      | ISO 8601 timestamp (update this every time you edit the file)    |
+| `started_at`   | Yes      | ISO 8601 timestamp when session started                          |
+| `updated_at`   | Yes      | ISO 8601 timestamp — **update every time you edit this file**    |
 | `agent_model`  | Yes      | Model you're running as (e.g., `claude-opus-4-6`)               |
 | `repository`   | Yes      | Repository in `owner/repo` format                                |
-| `tags`         | Yes      | Array of keyword tags (e.g., `["backend", "auth", "bugfix"]`)   |
-| `progress`     | Yes      | Integer `0`–`100` representing completion percentage             |
+| `update_mode`  | Yes      | `auto` · `manual` · `budget`                                    |
+| `tags`         | Yes      | Array of keyword tags                                            |
+| `progress`     | Yes      | Integer `0`–`100`                                                |
 
 ---
 
-## Section Guide
+## 6. Activity Log Format
 
-### Objective
-- 1-2 sentences. What is the goal of this session?
+The Activity Log is a timestamped record of what happened during the session. Each entry:
 
-### Tasks
-- Use `- [x]` for completed and `- [ ]` for pending
-- Be granular — each meaningful step gets its own checkbox
-- Order tasks logically (done first, pending after)
+```markdown
+### [YYYY-MM-DD HH:MM:SS] Short title
+Optional details about what was done, found, or decided.
+```
 
-### Changes Made
-- List every file you created or modified
-- Format: `path/to/file.ext` — brief description
-- Include new files, modified files, and deleted files
+**Rules per update mode:**
 
-### Key Decisions
-- Any architectural, design, or trade-off decisions
-- Include the "why" not just the "what"
-
-### Blockers
-- List anything preventing progress with enough detail for someone else to understand
-- If no blockers, write `_None._`
-
-### Notes
-- Handoff context for the next session
-- Anything the user should know
-- Suggested next steps
+- **auto**: Add a log entry after every prompt/response. Include what was done and any findings.
+- **manual**: Add log entries only when updating. Batch recent work into summary entries.
+- **budget**: Add two entries only — "Session started" and "Session completed" with a summary.
 
 ---
 
-## Status Guide
+## 7. When to Update
+
+### Auto Mode
+1. **After every prompt/response** — update `updated_at`, `progress`, check off Tasks, add Activity Log entry
+2. **On status change** — update `status` immediately (e.g., if you become blocked)
+
+### Manual Mode
+1. **At session start** — create the file with `status: "in_progress"`, `progress: 0`
+2. **When user asks** — update everything: tasks, progress, changes, activity log
+3. **At session end** — final update with accurate status and progress
+
+### Budget Mode
+1. **At session start** — create the file with basic info, `progress: 0`, one activity log entry
+2. **At session end** — single comprehensive update: all tasks, changes, decisions, final status, one summary activity log entry
+
+---
+
+## 8. Status Guide
 
 | Status         | When to Use                                                |
 |----------------|------------------------------------------------------------|
 | `not_started`  | File created but no real work done yet                     |
 | `in_progress`  | Actively working and making progress                       |
-| `blocked`      | Cannot continue — waiting on external dependency or issue  |
+| `blocked`      | Cannot continue — waiting on dependency or issue           |
 | `completed`    | All tasks finished successfully                            |
-| `failed`       | Session ended without completing due to unrecoverable errors |
+| `failed`       | Session ended due to unrecoverable errors                  |
 
 ---
 
-## Progress Scale
+## 9. Progress Scale
 
 | Range     | Meaning                                      |
 |-----------|----------------------------------------------|
-| `0-10`    | Just started, reading and understanding code  |
+| `0-10`    | Just started, reading and understanding       |
 | `20-40`   | Initial implementation underway               |
 | `50-70`   | Core work done, working on remaining tasks    |
 | `80-90`   | Nearly done, final testing and polish         |
@@ -161,12 +176,13 @@ Any additional context, next steps, or handoff notes.
 
 ---
 
-## Rules
+## 10. Rules
 
-1. **Always update `updated_at`** to the current time on every edit
-2. **Never create duplicate files** — update the existing one
+1. **Always update `updated_at`** to current time on every edit
+2. **Never create duplicate files** — always update the existing one
 3. **Be honest about `progress`** — reflect actual completion, not time spent
-4. **Be specific in Tasks** — vague tasks like "work on feature" are not useful
-5. **Update status accurately** — if you're blocked, say so; if you failed, say so
-6. **Include all file changes** — the user relies on this to understand what you did
-7. **Write for handoff** — assume another agent or person will read this to continue your work
+4. **Be specific in Tasks** — vague tasks are not useful
+5. **Log timestamps accurately** — use the actual time, not estimates
+6. **Include all file changes** in Changes Made
+7. **Write for handoff** — assume another agent will read this to continue your work
+8. **Respect the update mode** — don't waste tokens on auto-updates if mode is budget

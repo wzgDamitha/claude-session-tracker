@@ -7,6 +7,7 @@ started_at: "2026-03-28T09:00:00Z"
 updated_at: "2026-03-28T11:30:00Z"
 agent_model: "claude-opus-4-6"
 repository: "myorg/webapp"
+update_mode: "auto"
 tags: ["auth", "backend", "security"]
 progress: 60
 ---
@@ -32,6 +33,22 @@ Add JWT-based authentication to the API with login, logout, and token refresh.
 
 ## Blockers
 _None currently._
+
+## Activity Log
+### [2026-03-28 09:00:00] Session started
+Beginning work on JWT authentication for the API.
+
+### [2026-03-28 09:15:00] Completed: Review existing middleware
+Reviewed `src/middleware/auth.ts`. Currently uses session-based auth with express-session. Will replace with JWT.
+
+### [2026-03-28 09:45:00] Completed: JWT utility
+Created `src/auth/jwt.ts` with RS256 sign/verify. Chose RS256 over HS256 for key rotation support.
+
+### [2026-03-28 10:30:00] Completed: Login endpoint
+POST /login validates credentials against DB and returns access + refresh tokens. Added rate limiting (5 attempts/min).
+
+### [2026-03-28 11:30:00] In progress: Refresh token rotation
+Starting work on refresh token logic. Will store refresh tokens in Redis.
 
 ## Notes
 Login flow working end-to-end. Refresh token logic is next priority.
