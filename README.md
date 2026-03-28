@@ -186,9 +186,14 @@ Generated on first run. Edit directly or use the Settings UI.
   ],
   "discoverRoot": "C:\\Projects",
   "maxWidth": "100%",
+  "rowGap": "0px",
+  "columnGap": "0px",
+  "fontScale": "100",
   "port": 3890
 }
 ```
+
+All display settings (max width, row gap, column gap, font scale) are persisted to this file and restored on page refresh.
 
 ### Environment Variables
 
