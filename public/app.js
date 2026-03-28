@@ -252,7 +252,7 @@ function render() {
 }
 
 function statusColorVar(status) {
-  return { in_progress: '--neon-blue', completed: '--neon-green', blocked: '--neon-yellow', failed: '--neon-red', not_started: '--text-muted' }[status] || '--text-muted';
+  return { in_progress: '--accent', completed: '--accent', blocked: '--yellow', failed: '--red', not_started: '--text-tertiary' }[status] || '--text-tertiary';
 }
 
 function glowClass(status) {
@@ -296,7 +296,7 @@ function cardHTML(s) {
   let nextUpHTML = '';
   if (pendingTasks.length > 0) {
     const shown = pendingTasks.slice(0, 3);
-    const more = pendingTasks.length > 3 ? `<div style="font-size:0.7rem;color:var(--text-muted);padding-left:1rem;margin-top:0.15rem">+${pendingTasks.length - 3} more</div>` : '';
+    const more = pendingTasks.length > 3 ? `<div style="font-size:11px;color:var(--text-tertiary);padding-left:1rem;margin-top:4px">+${pendingTasks.length - 3} more</div>` : '';
     nextUpHTML = `
       <div class="card-next-up">
         <div class="card-next-up-title">&gt; next up</div>
@@ -355,7 +355,8 @@ function cardHTML(s) {
 function openModal(s) {
   const status = s.status || 'not_started';
   const progress = s.progress || 0;
-  const circumference = 2 * Math.PI * 30;
+  const ringRadius = 34;
+  const circumference = 2 * Math.PI * ringRadius;
   const offset = circumference - (progress / 100) * circumference;
   const colorVar = statusColorVar(status);
 
@@ -382,7 +383,7 @@ function openModal(s) {
   let timelineHTML = '';
   if (s.activityLog && s.activityLog.length > 0) {
     timelineHTML = `
-      <h2 style="color:var(--neon-blue);margin-top:1.5rem;margin-bottom:0.75rem;">Activity Timeline</h2>
+      <h2 style="color:var(--accent);margin-top:1.5rem;margin-bottom:0.75rem;">Activity Timeline</h2>
       ${isMidProject ? '<div class="timeline-partial-notice">// from tracking start point only</div>' : ''}
       <div class="activity-timeline">
         ${s.activityLog.map(entry => {
@@ -441,16 +442,16 @@ function openModal(s) {
     ${sessionHistoryHTML}
     <div class="modal-progress">
       <div class="progress-ring">
-        <svg width="72" height="72">
-          <circle class="progress-ring-bg" cx="36" cy="36" r="30"/>
-          <circle class="progress-ring-fill" cx="36" cy="36" r="30"
+        <svg width="80" height="80">
+          <circle class="progress-ring-bg" cx="40" cy="40" r="34"/>
+          <circle class="progress-ring-fill" cx="40" cy="40" r="34"
             style="stroke:var(${colorVar});stroke-dasharray:${circumference};stroke-dashoffset:${offset}"/>
         </svg>
         <div class="progress-ring-text">${progress}%</div>
       </div>
       <div>
-        <div style="font-weight:700;color:var(--text-bright)">${s.tasks.done} of ${s.tasks.total} tasks complete</div>
-        <div style="font-size:0.8rem;color:var(--text-muted);font-family:var(--font-mono)">${s.tasks.total - s.tasks.done} remaining</div>
+        <div style="font-weight:700;color:var(--text-primary)">${s.tasks.done} of ${s.tasks.total} tasks complete</div>
+        <div style="font-size:13px;color:var(--text-tertiary);font-family:var(--font-mono)">${s.tasks.total - s.tasks.done} remaining</div>
       </div>
     </div>
     ${pendingHTML}
