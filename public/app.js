@@ -1,6 +1,7 @@
 // --- State ---
 let sessions = [];
 let activeFilter = 'all';
+let currentView = 'grid';
 let currentConfig = null;
 
 // --- DOM refs ---
@@ -25,9 +26,10 @@ const settingsBtn = document.getElementById('settings-btn');
 const settingsOverlay = document.getElementById('settings-overlay');
 const settingsClose = document.getElementById('settings-close');
 const settingsBody = document.getElementById('settings-body');
-const modalOverlay = document.getElementById('modal-overlay');
-const modalBody = document.getElementById('modal-body');
-const modalClose = document.getElementById('modal-close');
+const detailScreen = document.getElementById('detail-screen');
+const detailBody = document.getElementById('detail-body');
+const detailBack = document.getElementById('detail-back');
+const viewToggle = document.getElementById('view-toggle');
 const filtersContainer = document.getElementById('filters');
 
 // --- Wizard ---
@@ -199,6 +201,7 @@ async function init() {
     if (currentConfig.configured) {
       wizardOverlay.classList.add('hidden');
       appEl.classList.remove('hidden');
+      applyMaxWidth(currentConfig.maxWidth);
       fetchSessions();
     } else {
       wizardOverlay.classList.remove('hidden');
@@ -242,13 +245,26 @@ function render() {
   }
 
   emptyState.style.display = 'none';
-  grid.innerHTML = filtered.map(s => cardHTML(s)).join('');
-  grid.querySelectorAll('.session-card').forEach(card => {
-    card.addEventListener('click', () => {
-      const session = sessions.find(s => s.file === card.dataset.file && s.sourceFolder === card.dataset.source);
-      if (session) openModal(session);
+
+  if (currentView === 'list') {
+    grid.className = 'sessions-list';
+    grid.innerHTML = listHeaderHTML() + filtered.map(s => listRowHTML(s)).join('');
+    grid.querySelectorAll('.list-row').forEach(row => {
+      row.addEventListener('click', () => {
+        const session = sessions.find(s => s.file === row.dataset.file && s.sourceFolder === row.dataset.source);
+        if (session) openDetail(session);
+      });
     });
-  });
+  } else {
+    grid.className = 'sessions-grid';
+    grid.innerHTML = filtered.map(s => cardHTML(s)).join('');
+    grid.querySelectorAll('.session-card').forEach(card => {
+      card.addEventListener('click', () => {
+        const session = sessions.find(s => s.file === card.dataset.file && s.sourceFolder === card.dataset.source);
+        if (session) openDetail(session);
+      });
+    });
+  }
 }
 
 function statusColorVar(status) {
@@ -368,8 +384,46 @@ function cardHTML(s) {
     </div>`;
 }
 
-// --- Modal ---
-function openModal(s) {
+// --- List view ---
+function listHeaderHTML() {
+  return `<div class="list-header">
+    <span></span>
+    <span>Project</span>
+    <span>Branch</span>
+    <span>Status</span>
+    <span>Tasks</span>
+    <span>Updated</span>
+  </div>`;
+}
+
+function listRowHTML(s) {
+  const status = s.status || 'not_started';
+  const progress = s.progress || 0;
+  const ringR = 16;
+  const circ = 2 * Math.PI * ringR;
+  const off = circ - (progress / 100) * circ;
+  const colorVar = statusColorVar(status);
+
+  return `
+    <div class="list-row" data-file="${escapeHtml(s.file)}" data-source="${escapeHtml(s.sourceFolder)}">
+      <div class="list-row-ring">
+        <svg width="40" height="40">
+          <circle class="list-row-ring-bg" cx="20" cy="20" r="${ringR}"/>
+          <circle class="list-row-ring-fill" cx="20" cy="20" r="${ringR}"
+            style="stroke:var(${colorVar});stroke-dasharray:${circ};stroke-dashoffset:${off}"/>
+        </svg>
+        <span class="list-row-ring-text">${progress}%</span>
+      </div>
+      <div class="list-row-title">${escapeHtml(s.title || s.file)}</div>
+      <div class="list-row-meta">${escapeHtml(s.current_branch || s.branch || '')}</div>
+      <div><span class="status-badge status-${status}">${status.replace('_', ' ')}</span></div>
+      <div class="list-row-tasks">${s.tasks.done}/${s.tasks.total}</div>
+      <div class="list-row-time">${s.updated_at ? timeAgo(s.updated_at) + ' ago' : ''}</div>
+    </div>`;
+}
+
+// --- Detail (full screen) ---
+function openDetail(s) {
   const status = s.status || 'not_started';
   const progress = s.progress || 0;
   const ringRadius = 34;
@@ -434,12 +488,12 @@ function openModal(s) {
   if (notesSection.trim() && !notesSection.trim().startsWith('_None')) {
     notesTopHTML = `
       <div class="card-notes" style="margin-bottom:1rem;border-top:none;border:1px solid var(--border);border-radius:var(--radius);padding:0.75rem 1rem">
-        <div style="font-family:var(--font-mono);font-size:0.68rem;color:var(--neon-purple);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.35rem;font-weight:700;font-style:normal">&gt; handoff notes</div>
-        <div style="font-style:normal;color:var(--text);font-size:0.82rem;line-height:1.5">${escapeHtml(notesSection.trim())}</div>
+        <div style="font-family:var(--font-mono);font-size:10px;color:var(--purple);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px;font-weight:700;font-style:normal">&gt; handoff notes</div>
+        <div style="font-style:normal;color:var(--text-secondary);font-size:13px;line-height:1.6">${escapeHtml(notesSection.trim())}</div>
       </div>`;
   }
 
-  modalBody.innerHTML = `
+  detailBody.innerHTML = `
     <h2>${escapeHtml(s.title || s.file)}</h2>
     <div class="modal-meta">
       <span class="status-badge status-${status}">${status.replace('_', ' ')}</span>
@@ -476,7 +530,14 @@ function openModal(s) {
     ${timelineHTML}
     <div class="session-content">${s.html}</div>
   `;
-  modalOverlay.classList.add('open');
+  detailScreen.classList.remove('hidden');
+  appEl.classList.add('hidden');
+  window.scrollTo(0, 0);
+}
+
+function closeDetail() {
+  detailScreen.classList.add('hidden');
+  appEl.classList.remove('hidden');
 }
 
 function closeModal(overlay) { overlay.classList.remove('open'); }
@@ -521,6 +582,15 @@ function renderSettings() {
       <div id="settings-discover-results"></div>
     </div>` : ''}
     <div class="settings-section">
+      <h3>Layout</h3>
+      <label class="form-label" style="font-family:var(--font-mono);font-size:10px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;display:block">Max Width</label>
+      <div class="settings-folder-add">
+        <input type="text" class="wizard-input" id="settings-max-width" value="${escapeHtml(currentConfig.maxWidth || '100%')}" placeholder="e.g. 100%, 1400px, 1200px">
+        <button class="wizard-add-btn" id="settings-save-width">Apply</button>
+      </div>
+      <p class="wizard-hint">Set the max width of the dashboard layout. Use 100% for full width or a px value like 1400px.</p>
+    </div>
+    <div class="settings-section">
       <h3>Reset</h3>
       <button class="settings-reset-btn" id="settings-reset-btn">Reset Configuration</button>
       <p class="wizard-hint" style="margin-top:0.4rem">This will clear your config and show the setup wizard again.</p>
@@ -559,7 +629,7 @@ function renderSettings() {
         try {
           const res = await fetch(`/api/discover?root=${encodeURIComponent(root)}`);
           const data = await res.json();
-          if (!res.ok) { discoverResults.innerHTML = `<p style="color:var(--neon-red);font-size:0.82rem;margin-top:0.5rem">${escapeHtml(data.error)}</p>`; return; }
+          if (!res.ok) { discoverResults.innerHTML = `<p style="color:var(--red);font-size:0.82rem;margin-top:0.5rem">${escapeHtml(data.error)}</p>`; return; }
           const currentFolders = currentConfig.watchFolders || [];
           discoverResults.innerHTML = `
             <ul class="discover-list" style="margin-top:0.75rem">
@@ -568,7 +638,7 @@ function renderSettings() {
                 const badges = [];
                 if (p.hasClaude) badges.push('<span class="discover-badge claude">CLAUDE.md</span>');
                 if (p.sessionCount > 0) badges.push('<span class="discover-badge sessions">' + p.sessionCount + ' session' + (p.sessionCount > 1 ? 's' : '') + '</span>');
-                return '<li class="discover-item"><div class="discover-item-info"><div class="discover-item-name">' + escapeHtml(p.name) + '</div><div class="discover-item-path">' + escapeHtml(p.sessionsPath) + '</div></div><div class="discover-item-badges">' + badges.join('') + '</div>' + (added ? '<span style="color:var(--neon-green);font-size:0.75rem;font-family:var(--font-mono)">added</span>' : '<button class="wizard-add-btn settings-discover-add" data-path="' + escapeHtml(p.sessionsPath) + '" style="padding:0.2rem 0.6rem;font-size:0.72rem">Add</button>') + '</li>';
+                return '<li class="discover-item"><div class="discover-item-info"><div class="discover-item-name">' + escapeHtml(p.name) + '</div><div class="discover-item-path">' + escapeHtml(p.sessionsPath) + '</div></div><div class="discover-item-badges">' + badges.join('') + '</div>' + (added ? '<span style="color:var(--accent);font-size:0.75rem;font-family:var(--font-mono)">added</span>' : '<button class="wizard-add-btn settings-discover-add" data-path="' + escapeHtml(p.sessionsPath) + '" style="padding:0.2rem 0.6rem;font-size:0.72rem">Add</button>') + '</li>';
               }).join('')}
             </ul>`;
           discoverResults.querySelectorAll('.settings-discover-add').forEach(btn => {
@@ -580,7 +650,7 @@ function renderSettings() {
             });
           });
         } catch (err) {
-          discoverResults.innerHTML = `<p style="color:var(--neon-red);font-size:0.82rem;margin-top:0.5rem">${escapeHtml(err.message)}</p>`;
+          discoverResults.innerHTML = `<p style="color:var(--red);font-size:0.82rem;margin-top:0.5rem">${escapeHtml(err.message)}</p>`;
         } finally {
           discoverBtn.textContent = 'Scan';
           discoverBtn.disabled = false;
@@ -589,6 +659,18 @@ function renderSettings() {
       discoverInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') discoverBtn.click(); });
     }
   }
+
+  // Max width
+  document.getElementById('settings-save-width').addEventListener('click', async () => {
+    const val = document.getElementById('settings-max-width').value.trim() || '100%';
+    await fetch('/api/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...currentConfig, maxWidth: val }),
+    });
+    applyMaxWidth(val);
+    await refreshConfig();
+  });
 
   document.getElementById('settings-reset-btn').addEventListener('click', async () => {
     await fetch('/api/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode: null }) });
@@ -601,6 +683,11 @@ async function refreshConfig() {
   currentConfig = await res.json();
 }
 
+function applyMaxWidth(value) {
+  const v = value || '100%';
+  document.documentElement.style.setProperty('--layout-max-width', v);
+}
+
 function escapeHtml(str) {
   if (!str) return '';
   const div = document.createElement('div');
@@ -609,15 +696,28 @@ function escapeHtml(str) {
 }
 
 // --- Events ---
-modalClose.addEventListener('click', () => closeModal(modalOverlay));
-modalOverlay.addEventListener('click', (e) => { if (e.target === modalOverlay) closeModal(modalOverlay); });
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeModal(modalOverlay); closeModal(settingsOverlay); } });
+detailBack.addEventListener('click', closeDetail);
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    if (!detailScreen.classList.contains('hidden')) closeDetail();
+    closeModal(settingsOverlay);
+  }
+});
 
 filtersContainer.addEventListener('click', (e) => {
   if (!e.target.classList.contains('filter-btn')) return;
   filtersContainer.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
   e.target.classList.add('active');
   activeFilter = e.target.dataset.filter;
+  render();
+});
+
+viewToggle.addEventListener('click', (e) => {
+  const btn = e.target.closest('.view-btn');
+  if (!btn) return;
+  viewToggle.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentView = btn.dataset.view;
   render();
 });
 

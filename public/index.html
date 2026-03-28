@@ -96,12 +96,22 @@
     </header>
 
     <main>
-      <div class="filters" id="filters">
-        <button class="filter-btn active" data-filter="all">All</button>
-        <button class="filter-btn" data-filter="in_progress">In Progress</button>
-        <button class="filter-btn" data-filter="completed">Completed</button>
-        <button class="filter-btn" data-filter="blocked">Blocked</button>
-        <button class="filter-btn" data-filter="failed">Failed</button>
+      <div class="toolbar">
+        <div class="filters" id="filters">
+          <button class="filter-btn active" data-filter="all">All</button>
+          <button class="filter-btn" data-filter="in_progress">In Progress</button>
+          <button class="filter-btn" data-filter="completed">Completed</button>
+          <button class="filter-btn" data-filter="blocked">Blocked</button>
+          <button class="filter-btn" data-filter="failed">Failed</button>
+        </div>
+        <div class="view-toggle" id="view-toggle">
+          <button class="view-btn active" data-view="grid" title="Grid view">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><rect x="0" y="0" width="6" height="6"/><rect x="8" y="0" width="6" height="6"/><rect x="0" y="8" width="6" height="6"/><rect x="8" y="8" width="6" height="6"/></svg>
+          </button>
+          <button class="view-btn" data-view="list" title="List view">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><rect x="0" y="1" width="14" height="2"/><rect x="0" y="6" width="14" height="2"/><rect x="0" y="11" width="14" height="2"/></svg>
+          </button>
+        </div>
       </div>
 
       <div class="sessions-grid" id="sessions-grid">
@@ -134,12 +144,12 @@
     </div>
   </div>
 
-  <!-- Session Detail Modal -->
-  <div class="modal-overlay" id="modal-overlay">
-    <div class="modal" id="modal">
-      <button class="modal-close" id="modal-close">&times;</button>
-      <div class="modal-body" id="modal-body"></div>
+  <!-- Session Detail (full screen) -->
+  <div class="detail-screen hidden" id="detail-screen">
+    <div class="detail-header">
+      <button class="detail-back" id="detail-back">&larr; Back</button>
     </div>
+    <div class="detail-body" id="detail-body"></div>
   </div>
 
   <script src="/app.js"></script>

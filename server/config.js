@@ -8,6 +8,7 @@ const DEFAULT_CONFIG = {
   sharedFolder: '',
   watchFolders: [],
   discoverRoot: '',
+  maxWidth: '100%',
   port: 3890,
 };
 
