@@ -1,28 +1,24 @@
 :root {
-  --bg: #07090e;
-  --bg-alt: #0a0d14;
-  --surface: #0f1219;
-  --surface-hover: #151a24;
-  --surface-glow: #111723;
-  --border: #1e2736;
-  --border-glow: #2a3650;
-  --text: #d4dce8;
-  --text-muted: #5e6a7e;
-  --text-bright: #f0f4fa;
+  --bg: #0a0f0d;
+  --bg-alt: #0d1210;
+  --surface: #111916;
+  --surface-hover: #182019;
+  --surface-glow: #14201a;
+  --border: #1e2e26;
+  --border-glow: #2a3e32;
+  --text: #c8d6cf;
+  --text-muted: #5a7165;
+  --text-bright: #e8f0ec;
 
-  --neon-blue: #00d4ff;
-  --neon-green: #00ff8c;
-  --neon-yellow: #ffcc00;
-  --neon-red: #ff3b5c;
-  --neon-purple: #b388ff;
-  --neon-orange: #ff8a3d;
-  --neon-cyan: #00e5ff;
-
-  --glow-blue: 0 0 20px rgba(0,212,255,0.15), 0 0 40px rgba(0,212,255,0.05);
-  --glow-green: 0 0 20px rgba(0,255,140,0.15), 0 0 40px rgba(0,255,140,0.05);
-  --glow-yellow: 0 0 20px rgba(255,204,0,0.15), 0 0 40px rgba(255,204,0,0.05);
-  --glow-red: 0 0 20px rgba(255,59,92,0.15), 0 0 40px rgba(255,59,92,0.05);
-  --glow-purple: 0 0 20px rgba(179,136,255,0.15);
+  --accent: #4ade80;
+  --accent-dim: #22c55e;
+  --green: #4ade80;
+  --green-muted: #16a34a;
+  --yellow: #eab308;
+  --red: #ef4444;
+  --purple: #a78bfa;
+  --orange: #f59e0b;
+  --cyan: #67e8f9;
 
   --radius: 10px;
   --font-mono: 'SF Mono', 'Cascadia Code', 'Fira Code', 'JetBrains Mono', Consolas, monospace;
@@ -35,9 +31,6 @@ body {
   background: var(--bg);
   color: var(--text);
   line-height: 1.6;
-  background-image:
-    radial-gradient(ellipse at 20% 0%, rgba(0,212,255,0.03) 0%, transparent 50%),
-    radial-gradient(ellipse at 80% 100%, rgba(179,136,255,0.03) 0%, transparent 50%);
   min-height: 100vh;
 }
 
