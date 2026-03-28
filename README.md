@@ -189,6 +189,10 @@ See [`claude-session-track.md`](claude-session-track.md) for the complete specif
 npm run dev    # Starts with --watch for auto-restart on server changes
 ```
 
+## Design
+
+UI design inspired by the [WZG Design System](https://webzgarden.com) by WebZ Garden.
+
 ## License
 
 MIT
