@@ -1,60 +1,59 @@
-# Session Report Template
+# Session Tracker File Template
 
-Each Claude Code session agent should write a markdown file using this format.
+Every project has **one** tracking file: `.claude/sessions/session-tracker.md`
+
+All sessions read and update the same file. See `claude-session-track.md` for full agent instructions.
 
 ---
 
 ```markdown
 ---
-session_id: "session-abc123"
-title: "Implement user authentication"
-branch: "feature/auth"
+title: "Project name or description"
+repository: "owner/repo-name"
 status: "in_progress"          # not_started | in_progress | blocked | completed | failed
-started_at: "2026-03-28T10:00:00Z"
-updated_at: "2026-03-28T11:30:00Z"
-agent_model: "claude-opus-4-6"
-repository: "myorg/myrepo"
-update_mode: "auto"            # auto | manual | budget
 tracking_start: "full"         # full | mid_project
-tags: ["auth", "backend", "security"]
-progress: 65                   # 0-100
+created_at: "2026-03-28T10:00:00Z"
+updated_at: "2026-03-28T11:30:00Z"
+current_session: "session_abc123"
+current_branch: "feature/auth"
+agent_model: "claude-opus-4-6"
+update_mode: "manual"          # auto | manual | budget
+tags: ["backend", "auth"]
+progress: 50                   # 0-100
 ---
 
 ## Objective
-Brief description of what this session is trying to accomplish.
+The overall goal of this project.
+
+## Project Summary (mid_project only)
+> Summarizes the project state when tracking began.
+
+- **What this project is:** One-line description
+- **What's been done:** High-level bullet points
+- **Current state:** Where things stand
+- **Tech stack:** Key technologies
 
 ## Tasks
-- [x] Reviewed existing auth middleware
-- [x] Added JWT token generation
-- [x] Created login endpoint
-- [ ] Added refresh token logic
-- [ ] Write tests for auth flow
+- [x] Completed task
+- [ ] Pending task
 
 ## Changes Made
-- `src/auth/jwt.ts` — Created JWT utility with sign/verify functions
-- `src/routes/login.ts` — New login POST endpoint
-- `src/middleware/auth.ts` — Updated to use new JWT logic
+### Session: session_abc123 (feature/auth) — 2026-03-28
+- `src/file.ts` — Description of change
 
 ## Key Decisions
-- Chose JWT over session cookies for stateless auth
-- Token expiry set to 15 minutes with refresh token pattern
+- Decision and reasoning
 
 ## Blockers
-_None currently._
+_None._
 
 ## Activity Log
-### [2026-03-28 10:00:00] Session started
-Beginning work on authentication feature.
+### [2026-03-28 10:00:00] Session started — session_abc123 (feature/auth)
+Beginning work on this project.
 
-### [2026-03-28 10:15:00] Completed: Review auth middleware
-Reviewed existing session-based auth. Will replace with JWT.
-
-### [2026-03-28 10:45:00] Completed: JWT utility
-Created sign/verify functions using RS256.
-
-### [2026-03-28 11:30:00] In progress: Login endpoint
-Working on credential validation and token response.
+### [2026-03-28 11:30:00] Session paused — session_abc123
+Stopping for now. Next: continue with pending tasks.
 
 ## Notes
-Working smoothly. Refresh token logic is next.
+Handoff notes for the next session.
 ```

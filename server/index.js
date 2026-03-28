@@ -264,13 +264,38 @@ function parseActivityLog(content) {
   const entryRegex = /### \[([^\]]+)\]\s*(.+)\n([\s\S]*?)(?=\n### \[|$)/g;
   let match;
   while ((match = entryRegex.exec(logSection[1])) !== null) {
+    const title = match[2].trim();
+    // Detect session boundary entries
+    const isSessionStart = /^(Session started|Tracking started)/i.test(title);
+    const isSessionEnd = /^(Session (completed|paused|ended))/i.test(title);
+    // Extract session ID from boundary entries like "Session started — session_abc123 (branch)"
+    const sessionMatch = title.match(/— (session[-_]\S+)/);
     entries.push({
       timestamp: match[1].trim(),
-      title: match[2].trim(),
+      title,
       body: match[3].trim(),
+      type: isSessionStart ? 'session_start' : isSessionEnd ? 'session_end' : 'work',
+      sessionRef: sessionMatch ? sessionMatch[1] : null,
     });
   }
   return entries;
+}
+
+// Extract list of unique sessions that contributed to this project
+function extractSessionHistory(activityLog) {
+  const sessions = [];
+  const seen = new Set();
+  for (const entry of activityLog) {
+    if (entry.sessionRef && !seen.has(entry.sessionRef)) {
+      seen.add(entry.sessionRef);
+      sessions.push({
+        sessionId: entry.sessionRef,
+        firstSeen: entry.timestamp,
+        type: entry.type,
+      });
+    }
+  }
+  return sessions;
 }
 
 function parseSessionFile(filePath, sourceFolder) {
@@ -299,6 +324,7 @@ function parseSessionFile(filePath, sourceFolder) {
 
   // Parse activity log
   const activityLog = parseActivityLog(content);
+  const sessionHistory = extractSessionHistory(activityLog);
 
   // Source folder label
   const sourceName = sourceFolder ? path.basename(path.resolve(sourceFolder, '..', '..')) || path.basename(sourceFolder) : '';
@@ -312,6 +338,8 @@ function parseSessionFile(filePath, sourceFolder) {
     tasks: { done: tasksDone, total: tasksTotal },
     sections,
     activityLog,
+    sessionHistory,
+    sessionCount: sessionHistory.length,
     html: marked(content),
   };
 }

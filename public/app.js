@@ -353,6 +353,11 @@ function cardHTML(s) {
     : s.tracking_start === 'full'
       ? '<span class="tracking-badge tracking-full">full history</span>'
       : '';
+  const sessionCountLabel = s.sessionCount > 1
+    ? `<span class="session-count-tag">${s.sessionCount} sessions</span>`
+    : s.sessionCount === 1
+      ? '<span class="session-count-tag">1 session</span>'
+      : '';
 
   // Latest activity
   const latestActivity = s.activityLog && s.activityLog.length > 0
@@ -369,8 +374,9 @@ function cardHTML(s) {
       <div class="card-meta">
         ${sourceLabel}
         ${trackingLabel}
+        ${sessionCountLabel}
         ${modeLabel}
-        ${s.branch ? `<span>&#127807; ${escapeHtml(s.branch)}</span>` : ''}
+        ${s.current_branch || s.branch ? `<span>&#127807; ${escapeHtml(s.current_branch || s.branch)}</span>` : ''}
         ${s.updated_at ? `<span>Updated ${timeAgo(s.updated_at)}</span>` : ''}
       </div>
       <div class="progress-bar-container">
@@ -406,6 +412,21 @@ function openModal(s) {
     `;
   }
 
+  // Session history summary
+  let sessionHistoryHTML = '';
+  if (s.sessionHistory && s.sessionHistory.length > 0) {
+    sessionHistoryHTML = `
+      <div class="session-history">
+        <h3>Session History</h3>
+        <div class="session-history-list">
+          ${s.sessionHistory.map((sh, i) => `
+            <span class="session-history-chip ${i === s.sessionHistory.length - 1 ? 'current' : ''}">${escapeHtml(sh.sessionId)}</span>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }
+
   // Build activity timeline HTML
   let timelineHTML = '';
   if (s.activityLog && s.activityLog.length > 0) {
@@ -413,13 +434,16 @@ function openModal(s) {
       <h2 style="color:var(--accent);margin-top:1.5rem;margin-bottom:0.75rem;">Activity Timeline</h2>
       ${isMidProject ? '<div class="timeline-partial-notice">Showing activity from tracking start point only</div>' : ''}
       <div class="activity-timeline">
-        ${s.activityLog.map(entry => `
-          <div class="activity-entry">
-            <div class="activity-time">${escapeHtml(entry.timestamp)}</div>
-            <div class="activity-title">${escapeHtml(entry.title)}</div>
-            ${entry.body ? `<div class="activity-body">${escapeHtml(entry.body)}</div>` : ''}
-          </div>
-        `).join('')}
+        ${s.activityLog.map(entry => {
+          const isBoundary = entry.type === 'session_start' || entry.type === 'session_end';
+          return `
+            <div class="activity-entry ${isBoundary ? 'activity-boundary' : ''}">
+              <div class="activity-time">${escapeHtml(entry.timestamp)}</div>
+              <div class="activity-title">${escapeHtml(entry.title)}</div>
+              ${entry.body ? `<div class="activity-body">${escapeHtml(entry.body)}</div>` : ''}
+            </div>
+          `;
+        }).join('')}
       </div>
     `;
   }
@@ -428,18 +452,20 @@ function openModal(s) {
     <h2>${escapeHtml(s.title || s.file)}</h2>
     <div class="modal-meta">
       <span class="status-badge status-${status}">${status.replace('_', ' ')}</span>
-      ${s.session_id ? `<span>ID: ${escapeHtml(s.session_id)}</span>` : ''}
-      ${s.branch ? `<span>&#127807; ${escapeHtml(s.branch)}</span>` : ''}
       ${s.repository ? `<span>&#128230; ${escapeHtml(s.repository)}</span>` : ''}
       ${s.agent_model ? `<span>&#129302; ${escapeHtml(s.agent_model)}</span>` : ''}
       ${s.update_mode ? `<span class="update-mode-tag">${escapeHtml(s.update_mode)} mode</span>` : ''}
       ${s.tracking_start === 'mid_project' ? '<span class="tracking-badge tracking-mid">mid-project</span>' : ''}
       ${s.tracking_start === 'full' ? '<span class="tracking-badge tracking-full">full history</span>' : ''}
+      ${s.sessionCount ? `<span class="session-count-tag">${s.sessionCount} session${s.sessionCount > 1 ? 's' : ''}</span>` : ''}
       ${s.sourceName ? `<span class="source-tag">${escapeHtml(s.sourceName)}</span>` : ''}
-      ${s.started_at ? `<span>Started: ${new Date(s.started_at).toLocaleString()}</span>` : ''}
+      ${s.current_session ? `<span>Current: ${escapeHtml(s.current_session)}</span>` : ''}
+      ${s.current_branch || s.branch ? `<span>&#127807; ${escapeHtml(s.current_branch || s.branch)}</span>` : ''}
+      ${s.created_at ? `<span>Tracking since: ${new Date(s.created_at).toLocaleString()}</span>` : ''}
       ${s.updated_at ? `<span>Updated: ${new Date(s.updated_at).toLocaleString()}</span>` : ''}
     </div>
     ${midProjectNotice}
+    ${sessionHistoryHTML}
     <div class="modal-progress">
       <div class="progress-ring">
         <svg width="64" height="64">

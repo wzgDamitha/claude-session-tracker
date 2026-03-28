@@ -5,177 +5,149 @@
 
 ---
 
-## 1. Output Folder
+## 1. The Tracking File
 
-Save your session report to the `.claude/sessions/` folder **inside this project's root directory**.
+Every project has **one** tracking file. All sessions share and update the same file.
 
-For example, if you are working in `/home/user/my-project`, write to:
+**Filename:** `session-tracker.md`
+**Location:** `.claude/sessions/session-tracker.md` inside the project root
+
+For example, if you are working in `/home/user/my-project`:
 ```
-/home/user/my-project/.claude/sessions/
+/home/user/my-project/.claude/sessions/session-tracker.md
 ```
 
 If the `.claude/sessions/` directory does not exist, **create it**.
 
 > **Override:** If the user specifies a different folder, use that instead.
 
+### On Session Start
+
+1. **Check if `session-tracker.md` already exists** in the sessions folder
+2. **If it exists** — read it, then update it (see Section 5: Continuing an Existing File)
+3. **If it doesn't exist** — create it fresh (see Section 4: File Format)
+
+**NEVER create a new file if one already exists. ALWAYS update the existing file.**
+
 ---
 
-## 2. New Session vs Existing Project
+## 2. New Project vs Existing Project
 
-Before writing your report, determine if you are **starting fresh** or **joining a project already in progress**.
-
-### How to Decide
+Before writing, determine whether this project is **new** or **already in progress**.
 
 | Situation | `tracking_start` value |
 |-----------|------------------------|
-| This is a brand-new task/feature with no prior work | `full` |
-| The project existed before tracking was added — there is significant prior work you didn't do | `mid_project` |
-| You're continuing a session that already has a tracking file | Keep the existing value |
+| Brand-new project with no prior work | `full` |
+| Project existed before tracking was added | `mid_project` |
+| File already exists (another session created it) | **Keep the existing value — do not change it** |
 
-> **If unsure, default to `mid_project`.** It's better to summarize than to waste tokens reconstructing history.
+> **If unsure, default to `mid_project`.** Better to summarize than waste tokens reconstructing history.
 
-### If `tracking_start: "mid_project"`
+### If `mid_project` (first time creating the file)
 
-**DO NOT** try to read the entire codebase or git history to reconstruct a detailed activity log. That wastes tokens and produces inaccurate results. Instead:
+**DO NOT** read the entire codebase or git history. Instead:
 
-1. **Do a quick scan** — look at the project structure, recent git log (last 5–10 commits), and any README/docs to understand the current state
-2. **Write a `## Project Summary` section** (replaces detailed Activity Log history) summarizing:
-   - What the project is
-   - What has been done so far (high-level bullet points)
-   - Current state of the codebase
-3. **List tasks as you understand them** — check off what appears done, leave pending items unchecked
-4. **Start logging normally from this point forward** — all new activity log entries are timestamped as usual
-
-### If `tracking_start: "full"`
-
-You are tracking from the beginning. Log everything as described in the Activity Log section below.
+1. **Quick scan** — project structure, `git log --oneline -15`, README/docs
+2. **Write a `## Project Summary` section** covering what the project is, what's done, current state
+3. **List tasks** — check off what appears done, leave pending items unchecked
+4. **Start logging from this point forward**
 
 ---
 
 ## 3. Update Mode
 
-The user will tell you which update mode to use. **If they don't specify, default to `manual`.**
+The user will tell you which mode to use. **Default: `manual`.**
 
 | Mode       | What You Do                                                    | Token Cost |
 |------------|----------------------------------------------------------------|------------|
-| **auto**   | Update the report after **every prompt/response** cycle        | Higher     |
+| **auto**   | Update the file after **every prompt/response** cycle          | Higher     |
 | **manual** | Update **only** when the user asks (e.g., "update tracker")   | Medium     |
 | **budget** | Update **twice**: once at session start, once at session end   | Lowest     |
 
 ---
 
-## 4. Filename
+## 4. File Format (Creating New)
 
-**CRITICAL: The filename MUST start with `session-` or `session_`.** The tracker app ignores all other `.md` files. Any file that does not match this pattern will **not appear** in the dashboard.
-
-```
-session-<identifier>.md
-```
-
-**Use one of these naming strategies (in order of preference):**
-
-1. **Session ID from URL** — `session_015WXoyPeSg5LLXjwMqzqnYM.md`
-2. **Descriptive name** — `session-fix-login-bug.md`, `session-add-auth-feature.md`
-3. **Date-based** — `session-2026-03-28-auth-work.md`
-
-**Rules:**
-- Filename must start with `session-` or `session_` (case-insensitive)
-- Use only letters, numbers, hyphens, and underscores after the prefix
-- Keep it short but descriptive
-- **Never create duplicate files** — always update the same file throughout the session
-
----
-
-## 5. File Format
+Use this structure when creating `session-tracker.md` for the first time:
 
 ### Full Tracking (`tracking_start: "full"`)
 
 ````markdown
 ---
-session_id: "your-session-id"
-title: "Short description of what you're working on"
-branch: "feature/branch-name"
-status: "in_progress"
-started_at: "2026-03-28T10:00:00Z"
-updated_at: "2026-03-28T11:30:00Z"
-agent_model: "claude-opus-4-6"
+title: "Project name or description"
 repository: "owner/repo-name"
-update_mode: "auto"
+status: "in_progress"
 tracking_start: "full"
-tags: ["relevant", "tags"]
-progress: 50
+created_at: "2026-03-28T10:00:00Z"
+updated_at: "2026-03-28T11:30:00Z"
+current_session: "session_abc123"
+current_branch: "feature/auth"
+agent_model: "claude-opus-4-6"
+update_mode: "manual"
+tags: ["backend", "auth"]
+progress: 30
 ---
 
 ## Objective
-One or two sentences explaining what this session is accomplishing.
+The overall goal of this project.
 
 ## Tasks
-- [x] Completed task description
-- [x] Another completed task
-- [ ] Pending task description
-- [ ] Another pending task
+- [x] Completed task
+- [ ] Pending task
 
 ## Changes Made
-- `path/to/file.ts` — What was changed and why
-- `path/to/other.ts` — Description of change
+### Session: session_abc123 (feature/auth) — 2026-03-28
+- `src/auth/jwt.ts` — Created JWT utility
+- `src/routes/login.ts` — New login endpoint
 
 ## Key Decisions
-- Decision made and brief reasoning
+- Chose JWT over session cookies for stateless auth
 
 ## Blockers
 _None._
 
 ## Activity Log
-### [2026-03-28 10:00:00] Session started
-Beginning work on user authentication feature.
+### [2026-03-28 10:00:00] Session started — session_abc123 (feature/auth)
+Beginning work on user authentication.
 
-### [2026-03-28 10:15:00] Completed: Review existing auth code
-Reviewed middleware in `src/middleware/auth.ts`. Found it uses deprecated session-based approach.
+### [2026-03-28 10:30:00] Completed: JWT utility
+Created sign/verify functions using RS256.
 
-### [2026-03-28 10:32:00] Completed: Implement JWT utility
-Created `src/auth/jwt.ts` with sign/verify functions using RS256.
-
-### [2026-03-28 10:45:00] In progress: Login endpoint
-Working on POST /api/login with credential validation.
+### [2026-03-28 11:30:00] Session paused — session_abc123
+Stopping for now. Login endpoint is next.
 
 ## Notes
-Any additional context, next steps, or handoff notes.
+Next session should pick up the login endpoint work.
 ````
 
 ### Mid-Project Tracking (`tracking_start: "mid_project"`)
 
 ````markdown
 ---
-session_id: "your-session-id"
-title: "Continue work on e-commerce platform"
-branch: "main"
-status: "in_progress"
-started_at: "2026-03-28T14:00:00Z"
-updated_at: "2026-03-28T16:30:00Z"
-agent_model: "claude-opus-4-6"
+title: "E-commerce Platform"
 repository: "owner/repo-name"
-update_mode: "manual"
+status: "in_progress"
 tracking_start: "mid_project"
+created_at: "2026-03-28T14:00:00Z"
+updated_at: "2026-03-28T16:30:00Z"
+current_session: "session_xyz789"
+current_branch: "feature/payments"
+agent_model: "claude-opus-4-6"
+update_mode: "manual"
 tags: ["e-commerce", "backend"]
 progress: 65
 ---
 
 ## Objective
-Adding payment processing integration to the existing e-commerce platform.
+Full-stack e-commerce platform — currently adding payment processing.
 
 ## Project Summary
-> This section summarizes the state of the project when tracking began.
-> The activity log below only covers work done from this point forward.
+> Summarizes project state when tracking began. Activity log only covers work from this point forward.
 
-- **What this project is:** Full-stack e-commerce platform with Next.js frontend and Express API
-- **What's been done:**
-  - User auth and account management (complete)
-  - Product catalog with search and filtering (complete)
-  - Shopping cart with persistent state (complete)
-  - Order management system (partial — missing payment integration)
-  - Admin dashboard (complete)
-- **Current state:** Core platform is functional. Payment processing is the main remaining feature before launch. Checkout flow exists but uses mock payment data.
-- **Tech stack:** Next.js 14, Express, PostgreSQL, Redis, Stripe SDK installed but not integrated
+- **What this project is:** E-commerce platform with Next.js frontend and Express API
+- **What's been done:** User auth, product catalog, shopping cart, admin dashboard (all complete)
+- **Current state:** Core platform functional. Payment processing is the main remaining feature.
+- **Tech stack:** Next.js 14, Express, PostgreSQL, Redis, Stripe
 
 ## Tasks
 - [x] User authentication and accounts
@@ -185,10 +157,10 @@ Adding payment processing integration to the existing e-commerce platform.
 - [ ] Integrate Stripe payment processing
 - [ ] Add webhook handlers for payment events
 - [ ] Write payment flow tests
-- [ ] Deploy to staging
 
 ## Changes Made
-- `src/payments/stripe.ts` — New Stripe integration service (in progress)
+### Session: session_xyz789 (feature/payments) — 2026-03-28
+- `src/payments/stripe.ts` — New Stripe integration service
 
 ## Key Decisions
 - Using Stripe Payment Intents API over Checkout Sessions for more control
@@ -197,18 +169,71 @@ Adding payment processing integration to the existing e-commerce platform.
 _None._
 
 ## Activity Log
-### [2026-03-28 14:00:00] Tracking started (mid-project)
+### [2026-03-28 14:00:00] Tracking started (mid-project) — session_xyz789 (feature/payments)
 Joined existing e-commerce project. Payment processing is the current priority.
 
-### [2026-03-28 14:20:00] Completed: Review payment requirements
-Reviewed checkout flow in `src/pages/checkout.tsx`. Currently uses mock data. Stripe SDK already in package.json.
-
 ### [2026-03-28 15:45:00] In progress: Stripe integration
-Building `src/payments/stripe.ts` with Payment Intents API.
+Building payment service with Payment Intents API.
+
+### [2026-03-28 16:30:00] Session paused — session_xyz789
+Stripe service partially complete. Webhook handlers next.
 
 ## Notes
-Project is well-structured. Payment integration should be straightforward.
+Payment integration underway. Next session should finish webhooks and add tests.
 ````
+
+---
+
+## 5. Continuing an Existing File
+
+When `session-tracker.md` already exists, **read it first**, then update these parts:
+
+### Frontmatter Updates
+- `updated_at` → current time
+- `current_session` → your session ID
+- `current_branch` → your current git branch
+- `agent_model` → your model
+- `update_mode` → the mode the user specified (or keep existing)
+- `status` → update if changed
+- `progress` → update based on task completion
+- **DO NOT change:** `title`, `repository`, `tracking_start`, `created_at`, `tags` (unless the user asks)
+
+### Tasks
+- **Check off** tasks you completed: `- [ ]` → `- [x]`
+- **Add new tasks** at the bottom of the pending list
+- **Do not remove or reorder** existing tasks
+
+### Changes Made
+- **Add a new session sub-heading** and list your changes under it:
+  ```markdown
+  ### Session: session_newID (branch-name) — 2026-03-29
+  - `file.ts` — What changed
+  ```
+- **Do not modify or remove** previous sessions' entries
+
+### Key Decisions
+- **Append** new decisions below existing ones
+- Do not remove previous decisions
+
+### Blockers
+- **Replace** with current blockers (or `_None._` if resolved)
+
+### Activity Log
+- **Add a session start entry** at the bottom:
+  ```
+  ### [2026-03-29 09:00:00] Session started — session_newID (branch-name)
+  Continuing from previous session. Focus: webhooks and tests.
+  ```
+- **Append new entries** below as you work
+- **Add a session end entry** when done:
+  ```
+  ### [2026-03-29 12:00:00] Session completed — session_newID
+  Finished webhook handlers and wrote 8 tests. All passing.
+  ```
+- **NEVER modify or remove** previous sessions' log entries
+
+### Notes
+- **Replace** with current notes (this section is always up-to-date, not cumulative)
 
 ---
 
@@ -216,129 +241,82 @@ Project is well-structured. Payment integration should be straightforward.
 
 | Field             | Required | Values / Format                                                  |
 |-------------------|----------|------------------------------------------------------------------|
-| `session_id`      | Yes      | Your session ID or a unique identifier                           |
-| `title`           | Yes      | Brief title for dashboard card (under 60 chars)                  |
-| `branch`          | Yes      | Git branch you're working on                                     |
-| `status`          | Yes      | `not_started` · `in_progress` · `blocked` · `completed` · `failed` |
-| `started_at`      | Yes      | ISO 8601 timestamp when session started                          |
-| `updated_at`      | Yes      | ISO 8601 timestamp — **update this every time you edit the file** |
-| `agent_model`     | Yes      | Model you're running as (e.g., `claude-opus-4-6`)               |
+| `title`           | Yes      | Project name or description (under 60 chars)                     |
 | `repository`      | Yes      | Repository in `owner/repo` format                                |
+| `status`          | Yes      | `not_started` · `in_progress` · `blocked` · `completed` · `failed` |
+| `tracking_start`  | Yes      | `full` · `mid_project` — set once, never change                  |
+| `created_at`      | Yes      | ISO 8601 — when tracking file was first created                  |
+| `updated_at`      | Yes      | ISO 8601 — **update every time you edit the file**               |
+| `current_session` | Yes      | Session ID of the most recent / active session                   |
+| `current_branch`  | Yes      | Git branch the current session is working on                     |
+| `agent_model`     | Yes      | Model of current session (e.g., `claude-opus-4-6`)              |
 | `update_mode`     | Yes      | `auto` · `manual` · `budget`                                    |
-| `tracking_start`  | Yes      | `full` · `mid_project`                                          |
-| `tags`            | Yes      | Array of keyword tags (e.g., `["backend", "auth", "bugfix"]`)   |
-| `progress`        | Yes      | Integer `0`–`100` representing completion percentage             |
+| `tags`            | Yes      | Array of keyword tags                                            |
+| `progress`        | Yes      | Integer `0`–`100`                                                |
 
 ---
 
-## 7. Required Sections
+## 7. Activity Log Format
 
-### Always Required
+Each entry follows this format:
 
-#### `## Objective`
-1–2 sentences. What is the goal of this session?
-
-#### `## Tasks`
-Checkbox list of work items. Use `- [x]` for done and `- [ ]` for pending.
-- Be granular — each meaningful step gets its own checkbox
-- Order: completed tasks first, then pending
-- For `mid_project`: include pre-existing completed work as checked items (high-level, don't over-detail)
-
-#### `## Changes Made`
-Every file **you** created, modified, or deleted in this session:
-- Format: `` `path/to/file.ext` `` — brief description of what changed
-- **Only include changes you made**, not prior work
-
-#### `## Key Decisions`
-Any architectural, design, or trade-off decisions. Include the *why*, not just the *what*.
-- If no decisions were made, write `_None._`
-
-#### `## Blockers`
-Anything preventing progress, with enough detail for someone else to understand.
-- If no blockers, write `_None._`
-
-#### `## Activity Log`
-Timestamped record of what happened. See section 8 for format details.
-
-#### `## Notes`
-Handoff context: next steps, things to watch out for, suggestions for the next session.
-
-### Mid-Project Only
-
-#### `## Project Summary`
-**Required when `tracking_start: "mid_project"`.** Place this after Objective, before Tasks.
-
-This section tells the dashboard (and future agents) what the project state was when tracking began. Include:
-
-- **What this project is** — one-line description
-- **What's been done** — high-level bullet points of completed work (do NOT read every file — just scan the structure and recent git log)
-- **Current state** — where things stand right now
-- **Tech stack** — key technologies (optional but helpful)
-
-> Keep this lightweight. Spend no more than a quick scan of the project structure and `git log --oneline -15`. Do NOT read every file to build this summary.
-
----
-
-## 8. Activity Log Format
-
-Timestamped record of what happened during the session.
-
-Each entry:
 ```markdown
 ### [YYYY-MM-DD HH:MM:SS] Short descriptive title
 Optional details about what was done, found, or decided.
-Can be multiple lines if needed.
 ```
 
-**Entry title conventions:**
-- `Session started` — first entry for `full` tracking
-- `Tracking started (mid-project)` — first entry for `mid_project` tracking
-- `Completed: <task name>` — when a task is finished
-- `In progress: <task name>` — when starting a new task
-- `Blocked: <reason>` — when hitting a blocker
-- `Decision: <summary>` — when making a key decision
-- `Session completed` / `Session paused` — last entry
+### Entry Title Conventions
 
-**Activity log rules per update mode:**
+**Session boundaries (always include session ID and branch):**
+- `Session started — session_abc123 (feature/auth)` — opening entry
+- `Tracking started (mid-project) — session_abc123 (feature/auth)` — first entry for mid_project
+- `Session paused — session_abc123` — stopping but not done
+- `Session completed — session_abc123` — all work for this session is done
+
+**Work entries:**
+- `Completed: <task name>` — when a task is finished
+- `In progress: <task name>` — when starting new work
+- `Blocked: <reason>` — when hitting a blocker
+- `Decision: <summary>` — when making a key choice
+
+### Rules per Update Mode
 
 | Mode       | What to Log                                                           |
 |------------|-----------------------------------------------------------------------|
 | **auto**   | One entry per prompt/response. Include what was done and key findings |
 | **manual** | Batch recent work into summary entries when updating                  |
-| **budget** | Two entries only: start entry and end entry                           |
-
-**For `mid_project`:** The first log entry should always be `Tracking started (mid-project)` — do NOT backfill historical entries. All entries before that point are captured in the Project Summary section instead.
+| **budget** | Two entries only: session start and session end                       |
 
 ---
 
-## 9. When to Write / Update
+## 8. When to Update
 
 ### Auto Mode
-| When                        | What to Do                                                        |
-|-----------------------------|-------------------------------------------------------------------|
-| **Session start**           | Create the file. Status `in_progress`, progress estimate, first log entry |
-| **After each prompt/response** | Update `updated_at`, `progress`, check off tasks, add log entry |
-| **On status change**        | Update `status` immediately (e.g., when blocked)                  |
-| **Session end**             | Final update with accurate status, progress, and closing log entry |
+| When                            | What to Do                                                    |
+|---------------------------------|---------------------------------------------------------------|
+| **Session start**               | Read existing file (or create new). Add session start log entry |
+| **After each prompt/response**  | Update `updated_at`, `progress`, check off tasks, add log entry |
+| **On status change**            | Update `status` immediately                                   |
+| **Session end**                 | Final update with session end log entry                       |
 
 ### Manual Mode
-| When                        | What to Do                                                        |
-|-----------------------------|-------------------------------------------------------------------|
-| **Session start**           | Create the file. Status `in_progress`, progress estimate          |
-| **When user asks**          | Full update: tasks, progress, changes, activity log               |
-| **Session end**             | Final update with accurate status and progress                    |
+| When                            | What to Do                                                    |
+|---------------------------------|---------------------------------------------------------------|
+| **Session start**               | Read existing file (or create new). Add session start log entry |
+| **When user asks**              | Full update: tasks, progress, changes, activity log           |
+| **Session end**                 | Final update with session end log entry                       |
 
 ### Budget Mode
-| When                        | What to Do                                                        |
-|-----------------------------|-------------------------------------------------------------------|
-| **Session start**           | Create the file with basic info, progress estimate, one log entry |
-| **Session end**             | One comprehensive update: all tasks, changes, decisions, final log |
-
-> **Note for `mid_project`:** When estimating initial `progress`, base it on how many tasks appear done vs remaining. Don't set it to `0` if the project is already 60% complete.
+| When                            | What to Do                                                    |
+|---------------------------------|---------------------------------------------------------------|
+| **Session start**               | Read existing file (or create new). Add session start log entry |
+| **Session end**                 | One comprehensive update with session end log entry           |
 
 ---
 
-## 10. Status Guide
+## 9. Status & Progress
+
+### Status Guide
 
 | Status         | When to Use                                                |
 |----------------|------------------------------------------------------------|
@@ -348,9 +326,7 @@ Can be multiple lines if needed.
 | `completed`    | All tasks finished successfully                            |
 | `failed`       | Session ended due to unrecoverable errors                  |
 
----
-
-## 11. Progress Scale
+### Progress Scale
 
 | Range     | Meaning                                      |
 |-----------|----------------------------------------------|
@@ -360,24 +336,24 @@ Can be multiple lines if needed.
 | `80–90`   | Nearly done, final testing and polish         |
 | `100`     | All tasks complete                            |
 
-> For `mid_project`: set initial progress based on what's already done. If 4 of 8 tasks are complete, start at ~50.
-
 ---
 
-## 12. Rules
+## 10. Rules
 
-1. **Filename must start with `session-` or `session_`** — this is non-negotiable, other files are invisible to the tracker
-2. **Always update `updated_at`** to current time on every edit
-3. **Never create duplicate files** — always update the existing one
-4. **Be honest about `progress`** — reflect actual completion, not time spent
-5. **Be specific in Tasks** — vague tasks like "work on feature" are useless
-6. **Log timestamps accurately** — use the actual current time
-7. **Include all file changes** in Changes Made — the user depends on this
-8. **Write for handoff** — assume another agent or person continues from where you left off
-9. **Respect the update mode** — don't waste tokens on auto-frequency updates in budget mode
-10. **Create the `.claude/sessions/` directory** if it doesn't exist — don't fail silently
-11. **Don't over-read for mid-project summaries** — a quick scan is enough, don't burn tokens reading every file
-12. **Set `tracking_start` accurately** — this tells the dashboard whether the history is complete or partial
+1. **One file per project: `session-tracker.md`** — all sessions share this file
+2. **Always read the existing file first** — never overwrite, always update
+3. **Never remove previous session data** — activity logs and changes are cumulative
+4. **Always update `updated_at`** to current time on every edit
+5. **Always add session boundary entries** in the activity log (start + end)
+6. **Be honest about `progress`** — reflect actual completion, not time spent
+7. **Be specific in Tasks** — vague tasks are useless
+8. **Log timestamps accurately** — use the actual current time
+9. **Include all file changes** under your session's sub-heading in Changes Made
+10. **Write Notes for handoff** — the next session reads this to understand what to do
+11. **Respect the update mode** — don't waste tokens in budget mode
+12. **Create `.claude/sessions/` directory** if it doesn't exist
+13. **Set `tracking_start` once** — never change it after the file is created
+14. **Don't over-read for mid-project summaries** — quick scan only
 
 ---
 
@@ -385,8 +361,11 @@ Can be multiple lines if needed.
 
 Copy-paste one of these to tell an agent what to do:
 
-**New project (full tracking):**
-> Read the file `claude-session-track.md` and follow its instructions. This is a new project — use `tracking_start: "full"`. Write to `.claude/sessions/`. Use **manual** mode.
+**New project:**
+> Read `claude-session-track.md` and follow its instructions. This is a new project — use `tracking_start: "full"`. Use **manual** mode.
 
-**Existing project (joining mid-way):**
-> Read the file `claude-session-track.md` and follow its instructions. This project has existing work — use `tracking_start: "mid_project"`. Write to `.claude/sessions/`. Use **manual** mode.
+**Existing project (first time tracking):**
+> Read `claude-session-track.md` and follow its instructions. This project has existing work — use `tracking_start: "mid_project"`. Use **manual** mode.
+
+**Continuing (tracking file already exists):**
+> Read `claude-session-track.md` and follow its instructions. The tracking file already exists at `.claude/sessions/session-tracker.md` — read it and continue from where the last session left off. Use **manual** mode.

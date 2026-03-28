@@ -559,6 +559,66 @@ main {
   margin-bottom: 0.5rem;
 }
 
+.session-count-tag {
+  background: rgba(139,148,158,0.12);
+  color: var(--text-muted);
+  padding: 0.1rem 0.45rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
+}
+
+/* Session history chips */
+.session-history {
+  margin-bottom: 1.25rem;
+}
+
+.session-history h3 {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+}
+
+.session-history-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.session-history-chip {
+  font-size: 0.72rem;
+  font-family: monospace;
+  padding: 0.2rem 0.55rem;
+  border-radius: 4px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+}
+
+.session-history-chip.current {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(88,166,255,0.08);
+}
+
+/* Activity log session boundaries */
+.activity-entry.activity-boundary {
+  position: relative;
+}
+
+.activity-entry.activity-boundary::before {
+  background: var(--yellow) !important;
+  width: 12px !important;
+  height: 12px !important;
+  left: -1.6rem !important;
+  top: 0.4rem !important;
+  border: 2px solid var(--surface) !important;
+}
+
+.activity-entry.activity-boundary .activity-title {
+  color: var(--yellow);
+  font-size: 0.85rem;
+}
+
 /* Progress bar */
 .progress-bar-container {
   background: var(--bg);
