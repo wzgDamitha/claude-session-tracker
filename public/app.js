@@ -315,7 +315,7 @@ function cardHTML(s) {
     const more = pendingTasks.length > 3 ? `<div style="font-size:11px;color:var(--text-tertiary);padding-left:1rem;margin-top:4px">+${pendingTasks.length - 3} more</div>` : '';
     nextUpHTML = `
       <div class="card-next-up">
-        <div class="card-next-up-title">&gt; next up</div>
+        <div class="card-next-up-title">// next up</div>
         ${shown.map(t => `<div class="task-item"><span class="task-pending">&#9679;</span> <span>${escapeHtml(t)}</span></div>`).join('')}
         ${more}
       </div>`;
@@ -334,7 +334,7 @@ function cardHTML(s) {
 
   // Latest activity
   const latest = s.activityLog && s.activityLog.length > 0 ? s.activityLog[s.activityLog.length - 1] : null;
-  const latestHTML = latest ? `<div class="card-latest"><span>&gt;</span> ${escapeHtml(latest.title)}</div>` : '';
+  const latestHTML = latest ? `<div class="card-latest"><span>//</span> ${escapeHtml(latest.title)}</div>` : '';
 
   // Notes
   const notesHTML = notesPreview && notesPreview !== '_None._' && !notesPreview.startsWith('_None')
@@ -434,7 +434,7 @@ function openDetail(s) {
   const isMidProject = s.tracking_start === 'mid_project';
   let midProjectNotice = isMidProject ? `
     <div class="mid-project-notice">
-      <div class="mid-project-label">&gt; mid-project tracking</div>
+      <div class="mid-project-label">// mid-project tracking</div>
       <div class="mid-project-desc">Tracking started after the project was already in progress. The Project Summary covers prior work. The Activity Log only covers work from the tracking start point.</div>
     </div>` : '';
 
@@ -455,7 +455,7 @@ function openDetail(s) {
   if (s.activityLog && s.activityLog.length > 0) {
     timelineHTML = `
       <h2 style="color:var(--accent);margin-top:1.5rem;margin-bottom:0.75rem;">Activity Timeline</h2>
-      ${isMidProject ? '<div class="timeline-partial-notice">// from tracking start point only</div>' : ''}
+      ${isMidProject ? '<div class="timeline-partial-notice">// activity from tracking start point only</div>' : ''}
       <div class="activity-timeline">
         ${s.activityLog.map(entry => {
           const isBoundary = entry.type === 'session_start' || entry.type === 'session_end';
@@ -479,7 +479,7 @@ function openDetail(s) {
   if (pendingTasks.length > 0) {
     pendingHTML = `
       <div class="card-next-up" style="margin-bottom:1rem">
-        <div class="card-next-up-title">&gt; remaining tasks (${pendingTasks.length})</div>
+        <div class="card-next-up-title">// remaining tasks (${pendingTasks.length})</div>
         ${pendingTasks.map(t => `<div class="task-item"><span class="task-pending">&#9679;</span> <span>${escapeHtml(t)}</span></div>`).join('')}
       </div>`;
   }
@@ -488,7 +488,7 @@ function openDetail(s) {
   if (notesSection.trim() && !notesSection.trim().startsWith('_None')) {
     notesTopHTML = `
       <div class="card-notes" style="margin-bottom:1rem;border-top:none;border:1px solid var(--border);border-radius:var(--radius);padding:0.75rem 1rem">
-        <div style="font-family:var(--font-mono);font-size:10px;color:var(--purple);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px;font-weight:700;font-style:normal">&gt; handoff notes</div>
+        <div style="font-family:var(--font-mono);font-size:10px;color:var(--purple);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px;font-weight:700;font-style:normal">// handoff notes</div>
         <div style="font-style:normal;color:var(--text-secondary);font-size:13px;line-height:1.6">${escapeHtml(notesSection.trim())}</div>
       </div>`;
   }
@@ -529,7 +529,7 @@ function openDetail(s) {
     ${notesTopHTML}
     <div class="user-notes" id="user-notes" data-source="${escapeHtml(s.sourceFolder)}">
       <div class="user-notes-header">
-        <span class="user-notes-title">/ User Notes</span>
+        <span class="user-notes-title">// User Notes</span>
         <span class="user-notes-count" id="notes-count"></span>
       </div>
       <div class="user-notes-entries" id="notes-entries">
