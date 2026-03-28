@@ -212,7 +212,7 @@ async function init() {
     if (currentConfig.configured) {
       wizardOverlay.classList.add('hidden');
       appEl.classList.remove('hidden');
-      applyMaxWidth(currentConfig.maxWidth);
+      applyDisplaySettings(currentConfig);
       fetchSessions();
     } else {
       wizardOverlay.classList.remove('hidden');
@@ -774,13 +774,30 @@ function renderSettings() {
       <div id="settings-discover-results"></div>
     </div>` : ''}
     <div class="settings-section">
-      <h3>Layout</h3>
+      <h3>Display</h3>
       <label class="form-label" style="font-family:var(--font-mono);font-size:10px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;display:block">Max Width</label>
       <div class="settings-folder-add">
-        <input type="text" class="wizard-input" id="settings-max-width" value="${escapeHtml(currentConfig.maxWidth || '100%')}" placeholder="e.g. 100%, 1400px, 1200px">
-        <button class="wizard-add-btn" id="settings-save-width">Apply</button>
+        <input type="text" class="wizard-input" id="settings-max-width" value="${escapeHtml(currentConfig.maxWidth || '100%')}" placeholder="e.g. 100%, 1400px">
       </div>
-      <p class="wizard-hint">Set the max width of the dashboard layout. Use 100% for full width or a px value like 1400px.</p>
+      <p class="wizard-hint">Dashboard max width. Use 100% for full width or a px value like 1400px.</p>
+
+      <label class="form-label" style="font-family:var(--font-mono);font-size:10px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;margin-top:16px;display:block">Row Gap</label>
+      <div class="settings-folder-add">
+        <input type="text" class="wizard-input" id="settings-row-gap" value="${escapeHtml(currentConfig.rowGap || '0px')}" placeholder="e.g. 0px, 8px, 16px">
+      </div>
+
+      <label class="form-label" style="font-family:var(--font-mono);font-size:10px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;margin-top:16px;display:block">Column Gap</label>
+      <div class="settings-folder-add">
+        <input type="text" class="wizard-input" id="settings-column-gap" value="${escapeHtml(currentConfig.columnGap || '0px')}" placeholder="e.g. 0px, 8px, 16px">
+      </div>
+
+      <label class="form-label" style="font-family:var(--font-mono);font-size:10px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;margin-top:16px;display:block">Font Scale — <span id="font-scale-value">${escapeHtml(currentConfig.fontScale || '100')}%</span></label>
+      <div style="display:flex;align-items:center;gap:12px">
+        <input type="range" id="settings-font-scale" min="70" max="150" step="5" value="${escapeHtml(currentConfig.fontScale || '100')}" style="flex:1;accent-color:var(--accent)">
+      </div>
+      <p class="wizard-hint">Scale all text sizes (70%–150%).</p>
+
+      <button class="wizard-add-btn" id="settings-save-display" style="margin-top:16px">Apply</button>
     </div>
     <div class="settings-section">
       <h3>Reset</h3>
@@ -852,15 +869,24 @@ function renderSettings() {
     }
   }
 
-  // Max width
-  document.getElementById('settings-save-width').addEventListener('click', async () => {
-    const val = document.getElementById('settings-max-width').value.trim() || '100%';
+  // Display settings
+  const fontScaleSlider = document.getElementById('settings-font-scale');
+  const fontScaleValue = document.getElementById('font-scale-value');
+  fontScaleSlider.addEventListener('input', () => {
+    fontScaleValue.textContent = fontScaleSlider.value + '%';
+  });
+
+  document.getElementById('settings-save-display').addEventListener('click', async () => {
+    const maxWidth = document.getElementById('settings-max-width').value.trim() || '100%';
+    const rowGap = document.getElementById('settings-row-gap').value.trim() || '0px';
+    const columnGap = document.getElementById('settings-column-gap').value.trim() || '0px';
+    const fontScale = fontScaleSlider.value || '100';
     await fetch('/api/config', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...currentConfig, maxWidth: val }),
+      body: JSON.stringify({ ...currentConfig, maxWidth, rowGap, columnGap, fontScale }),
     });
-    applyMaxWidth(val);
+    applyDisplaySettings({ maxWidth, rowGap, columnGap, fontScale });
     await refreshConfig();
   });
 
@@ -875,9 +901,13 @@ async function refreshConfig() {
   currentConfig = await res.json();
 }
 
-function applyMaxWidth(value) {
-  const v = value || '100%';
-  document.documentElement.style.setProperty('--layout-max-width', v);
+function applyDisplaySettings(cfg) {
+  const root = document.documentElement.style;
+  root.setProperty('--layout-max-width', cfg.maxWidth || '100%');
+  root.setProperty('--grid-row-gap', cfg.rowGap || '0px');
+  root.setProperty('--grid-column-gap', cfg.columnGap || '0px');
+  root.setProperty('--font-scale', (parseInt(cfg.fontScale, 10) || 100) / 100);
+  document.getElementById('app').style.zoom = (parseInt(cfg.fontScale, 10) || 100) / 100;
 }
 
 function escapeHtml(str) {

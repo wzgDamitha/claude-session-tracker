@@ -9,6 +9,9 @@ const DEFAULT_CONFIG = {
   watchFolders: [],
   discoverRoot: '',
   maxWidth: '100%',
+  rowGap: '0px',
+  columnGap: '0px',
+  fontScale: '100',
   port: 3890,
 };
 

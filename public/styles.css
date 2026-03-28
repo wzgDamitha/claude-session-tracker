@@ -32,6 +32,10 @@
   --yellow: #eab308;
   --red: #ef4444;
   --purple: #a78bfa;
+
+  --grid-row-gap: 0px;
+  --grid-column-gap: 0px;
+  --font-scale: 1;
 }
 
 /* Noise texture */
@@ -552,8 +556,8 @@ main {
 .sessions-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
-  column-gap: 0px;
-  row-gap: 16px;
+  column-gap: var(--grid-column-gap);
+  row-gap: var(--grid-row-gap);
   background: transparent;
 }
 
@@ -837,7 +841,7 @@ main {
 .sessions-grid.list-view {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--grid-row-gap);
 }
 
 .sessions-grid.list-view .session-card {
