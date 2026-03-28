@@ -324,6 +324,12 @@ function cardHTML(s) {
   const notesHTML = notesPreview && notesPreview !== '_None._' && !notesPreview.startsWith('_None')
     ? `<div class="card-notes">"${escapeHtml(notesPreview)}${notesPreview.length >= 120 ? '...' : ''}"</div>` : '';
 
+  // Card progress ring (smaller version)
+  const cardRingR = 20;
+  const cardCirc = 2 * Math.PI * cardRingR;
+  const cardOffset = cardCirc - (progress / 100) * cardCirc;
+  const cardColorVar = statusColorVar(status);
+
   return `
     <div class="session-card" data-file="${escapeHtml(s.file)}" data-source="${escapeHtml(s.sourceFolder)}" data-status="${status}">
       <div class="status-stripe stripe-${status}"></div>
@@ -336,12 +342,23 @@ function cardHTML(s) {
         ${s.current_branch || s.branch ? `<span>&#9702; ${escapeHtml(s.current_branch || s.branch)}</span>` : ''}
         ${s.updated_at ? `<span>${timeAgo(s.updated_at)} ago</span>` : ''}
       </div>
-      <div class="progress-bar-container">
-        <div class="progress-bar-fill ${glowClass(status)}" style="width:${progress}%"></div>
-      </div>
-      <div class="progress-info">
-        <span>${s.tasks.done}/${s.tasks.total} tasks</span>
-        <span>${progress}%</span>
+      <div class="card-progress">
+        <div class="card-ring">
+          <svg width="48" height="48">
+            <circle class="card-ring-bg" cx="24" cy="24" r="${cardRingR}"/>
+            <circle class="card-ring-fill" cx="24" cy="24" r="${cardRingR}"
+              style="stroke:var(${cardColorVar});stroke-dasharray:${cardCirc};stroke-dashoffset:${cardOffset}"/>
+          </svg>
+          <span class="card-ring-text">${progress}%</span>
+        </div>
+        <div class="card-progress-info">
+          <div class="card-progress-tasks">${s.tasks.done} of ${s.tasks.total} tasks</div>
+          <div class="card-progress-bar-wrap">
+            <div class="progress-bar-container">
+              <div class="progress-bar-fill ${glowClass(status)}" style="width:${progress}%"></div>
+            </div>
+          </div>
+        </div>
       </div>
       ${nextUpHTML}
       ${doneHTML}

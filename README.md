@@ -191,7 +191,7 @@ npm run dev    # Starts with --watch for auto-restart on server changes
 
 ## Design
 
-UI design inspired by the [WZG Design System](https://webzgarden.com) by WebZ Garden.
+UI design inspired by the [WZG Design System](https://webzgarden.com) by WebZGarden.
 
 ## License
 
