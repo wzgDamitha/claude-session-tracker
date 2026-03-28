@@ -348,6 +348,11 @@ function cardHTML(s) {
   const tags = (s.tags || []).map(t => `<span class="tag">${escapeHtml(t)}</span>`).join('');
   const sourceLabel = s.sourceName ? `<span class="source-tag">${escapeHtml(s.sourceName)}</span>` : '';
   const modeLabel = s.update_mode ? `<span class="update-mode-tag">${escapeHtml(s.update_mode)}</span>` : '';
+  const trackingLabel = s.tracking_start === 'mid_project'
+    ? '<span class="tracking-badge tracking-mid">mid-project</span>'
+    : s.tracking_start === 'full'
+      ? '<span class="tracking-badge tracking-full">full history</span>'
+      : '';
 
   // Latest activity
   const latestActivity = s.activityLog && s.activityLog.length > 0
@@ -363,6 +368,7 @@ function cardHTML(s) {
       </div>
       <div class="card-meta">
         ${sourceLabel}
+        ${trackingLabel}
         ${modeLabel}
         ${s.branch ? `<span>&#127807; ${escapeHtml(s.branch)}</span>` : ''}
         ${s.updated_at ? `<span>Updated ${timeAgo(s.updated_at)}</span>` : ''}
@@ -388,11 +394,24 @@ function openModal(s) {
   const circumference = 2 * Math.PI * 28;
   const offset = circumference - (progress / 100) * circumference;
 
+  // Build mid-project notice
+  const isMidProject = s.tracking_start === 'mid_project';
+  let midProjectNotice = '';
+  if (isMidProject) {
+    midProjectNotice = `
+      <div class="mid-project-notice">
+        <div class="mid-project-label">Mid-Project Tracking</div>
+        <div class="mid-project-desc">Tracking started after the project was already in progress. The Project Summary below covers prior work. The Activity Log only covers work done from the tracking start point.</div>
+      </div>
+    `;
+  }
+
   // Build activity timeline HTML
   let timelineHTML = '';
   if (s.activityLog && s.activityLog.length > 0) {
     timelineHTML = `
       <h2 style="color:var(--accent);margin-top:1.5rem;margin-bottom:0.75rem;">Activity Timeline</h2>
+      ${isMidProject ? '<div class="timeline-partial-notice">Showing activity from tracking start point only</div>' : ''}
       <div class="activity-timeline">
         ${s.activityLog.map(entry => `
           <div class="activity-entry">
@@ -414,10 +433,13 @@ function openModal(s) {
       ${s.repository ? `<span>&#128230; ${escapeHtml(s.repository)}</span>` : ''}
       ${s.agent_model ? `<span>&#129302; ${escapeHtml(s.agent_model)}</span>` : ''}
       ${s.update_mode ? `<span class="update-mode-tag">${escapeHtml(s.update_mode)} mode</span>` : ''}
+      ${s.tracking_start === 'mid_project' ? '<span class="tracking-badge tracking-mid">mid-project</span>' : ''}
+      ${s.tracking_start === 'full' ? '<span class="tracking-badge tracking-full">full history</span>' : ''}
       ${s.sourceName ? `<span class="source-tag">${escapeHtml(s.sourceName)}</span>` : ''}
       ${s.started_at ? `<span>Started: ${new Date(s.started_at).toLocaleString()}</span>` : ''}
       ${s.updated_at ? `<span>Updated: ${new Date(s.updated_at).toLocaleString()}</span>` : ''}
     </div>
+    ${midProjectNotice}
     <div class="modal-progress">
       <div class="progress-ring">
         <svg width="64" height="64">

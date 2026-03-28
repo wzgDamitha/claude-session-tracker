@@ -15,6 +15,7 @@ updated_at: "2026-03-28T11:30:00Z"
 agent_model: "claude-opus-4-6"
 repository: "myorg/myrepo"
 update_mode: "auto"            # auto | manual | budget
+tracking_start: "full"         # full | mid_project
 tags: ["auth", "backend", "security"]
 progress: 65                   # 0-100
 ---

@@ -514,6 +514,51 @@ main {
   font-size: 0.7rem;
 }
 
+.tracking-badge {
+  padding: 0.1rem 0.45rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
+}
+
+.tracking-full {
+  background: rgba(63,185,80,0.12);
+  color: var(--green);
+}
+
+.tracking-mid {
+  background: rgba(210,153,34,0.12);
+  color: var(--yellow);
+}
+
+/* Mid-project notice in modal */
+.mid-project-notice {
+  background: rgba(210,153,34,0.08);
+  border: 1px solid rgba(210,153,34,0.25);
+  border-radius: var(--radius);
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+}
+
+.mid-project-label {
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--yellow);
+  margin-bottom: 0.25rem;
+}
+
+.mid-project-desc {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.timeline-partial-notice {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-style: italic;
+  margin-bottom: 0.5rem;
+}
+
 /* Progress bar */
 .progress-bar-container {
   background: var(--bg);

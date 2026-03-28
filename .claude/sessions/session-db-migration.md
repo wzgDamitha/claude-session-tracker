@@ -8,6 +8,7 @@ updated_at: "2026-03-27T18:45:00Z"
 agent_model: "claude-sonnet-4-6"
 repository: "myorg/webapp"
 update_mode: "manual"
+tracking_start: "full"
 tags: ["database", "migration"]
 progress: 100
 ---

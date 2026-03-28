@@ -8,6 +8,7 @@ updated_at: "2026-03-28T11:30:00Z"
 agent_model: "claude-opus-4-6"
 repository: "myorg/webapp"
 update_mode: "auto"
+tracking_start: "full"
 tags: ["auth", "backend", "security"]
 progress: 60
 ---
