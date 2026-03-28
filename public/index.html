@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Claude Session Tracker</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header>
+    <div class="header-content">
+      <h1>Claude Session Tracker</h1>
+      <div class="header-stats" id="header-stats"></div>
+    </div>
+  </header>
+
+  <main>
+    <div class="filters" id="filters">
+      <button class="filter-btn active" data-filter="all">All</button>
+      <button class="filter-btn" data-filter="in_progress">In Progress</button>
+      <button class="filter-btn" data-filter="completed">Completed</button>
+      <button class="filter-btn" data-filter="blocked">Blocked</button>
+      <button class="filter-btn" data-filter="failed">Failed</button>
+    </div>
+
+    <div class="sessions-grid" id="sessions-grid">
+      <div class="empty-state" id="empty-state">
+        <div class="empty-icon">📋</div>
+        <h2>No sessions yet</h2>
+        <p>Add session markdown files to <code>.claude/sessions/</code> to get started.</p>
+        <p class="hint">See <code>SESSION_TEMPLATE.md</code> for the expected format.</p>
+      </div>
+    </div>
+  </main>
+
+  <!-- Session detail modal -->
+  <div class="modal-overlay" id="modal-overlay">
+    <div class="modal" id="modal">
+      <button class="modal-close" id="modal-close">&times;</button>
+      <div class="modal-body" id="modal-body"></div>
+    </div>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
