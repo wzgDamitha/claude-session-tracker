@@ -10,6 +10,13 @@
   <!-- Setup Wizard (first run) -->
   <div class="wizard-overlay" id="wizard-overlay">
     <div class="wizard-card">
+      <pre class="ascii-logo">
+ ██████╗███████╗████████╗
+██╔════╝██╔════╝╚══██╔══╝
+██║     ███████╗   ██║
+██║     ╚════██║   ██║
+╚██████╗███████║   ██║
+ ╚═════╝╚══════╝   ╚═╝</pre>
       <h1>Claude Session Tracker</h1>
       <p class="wizard-subtitle">Choose how sessions report their progress.</p>
 
@@ -17,12 +24,12 @@
       <div class="wizard-step" id="wizard-step-mode">
         <div class="wizard-modes">
           <button class="wizard-mode-btn" data-mode="shared">
-            <div class="mode-icon">&#128193;</div>
+            <div class="mode-icon">&gt; shared/</div>
             <div class="mode-title">Shared Folder</div>
             <div class="mode-desc">All Claude Code sessions write to one shared folder. Best when all sessions can access the same path.</div>
           </button>
           <button class="wizard-mode-btn" data-mode="individual">
-            <div class="mode-icon">&#128194;</div>
+            <div class="mode-icon">&gt; multi/</div>
             <div class="mode-title">Individual Folders</div>
             <div class="mode-desc">Each project has its own session folder. Add multiple paths and the dashboard aggregates them all.</div>
           </button>
@@ -33,14 +40,12 @@
       <div class="wizard-step hidden" id="wizard-step-paths">
         <button class="wizard-back" id="wizard-back">&larr; Back</button>
 
-        <!-- Shared mode input -->
         <div id="wizard-shared" class="hidden">
           <label class="wizard-label">Shared sessions folder path:</label>
           <input type="text" id="wizard-shared-input" class="wizard-input" placeholder="e.g. F:\Future\Claude Project Tracker\.claude\sessions">
           <p class="wizard-hint">All agents will write session files here. The folder will be created if it doesn't exist.</p>
         </div>
 
-        <!-- Individual mode input -->
         <div id="wizard-individual" class="hidden">
           <label class="wizard-label">Auto-discover projects:</label>
           <div class="wizard-folder-add">
@@ -67,7 +72,7 @@
           <ul class="wizard-folder-list" id="wizard-folder-list"></ul>
         </div>
 
-        <button class="wizard-save-btn" id="wizard-save-btn">Save &amp; Start</button>
+        <button class="wizard-save-btn" id="wizard-save-btn">Initialize &gt;&gt;</button>
         <div class="wizard-error hidden" id="wizard-error"></div>
       </div>
     </div>
@@ -77,10 +82,15 @@
   <div id="app" class="hidden">
     <header>
       <div class="header-content">
-        <h1>Claude Session Tracker</h1>
+        <div class="header-left">
+          <span class="header-logo">&gt;_</span>
+          <h1>Claude Session Tracker</h1>
+        </div>
         <div class="header-right">
           <div class="header-stats" id="header-stats"></div>
-          <button class="settings-btn" id="settings-btn" title="Settings">&#9881;</button>
+          <button class="settings-btn" id="settings-btn" title="Settings">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492ZM5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0Z"/><path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52l-.094-.319Zm-2.633.283c.246-.835 1.428-.835 1.674 0l.094.319a1.873 1.873 0 0 0 2.693 1.115l.291-.16c.764-.415 1.6.42 1.184 1.185l-.159.292a1.873 1.873 0 0 0 1.116 2.692l.318.094c.835.246.835 1.428 0 1.674l-.319.094a1.873 1.873 0 0 0-1.115 2.693l.16.291c.415.764-.421 1.6-1.185 1.184l-.291-.159a1.873 1.873 0 0 0-2.693 1.116l-.094.318c-.246.835-1.428.835-1.674 0l-.094-.319a1.873 1.873 0 0 0-2.692-1.115l-.292.16c-.764.415-1.6-.421-1.184-1.185l.159-.291A1.873 1.873 0 0 0 1.945 8.93l-.319-.094c-.835-.246-.835-1.428 0-1.674l.319-.094A1.873 1.873 0 0 0 3.06 4.377l-.16-.292c-.415-.764.42-1.6 1.185-1.184l.292.159a1.873 1.873 0 0 0 2.692-1.116l.094-.318Z"/></svg>
+          </button>
         </div>
       </div>
     </header>
@@ -96,8 +106,13 @@
 
       <div class="sessions-grid" id="sessions-grid">
         <div class="empty-state" id="empty-state">
-          <div class="empty-icon">&#128203;</div>
-          <h2>No sessions yet</h2>
+          <pre class="empty-ascii">
+  [ no signal ]
+  ╭──────────╮
+  │  ?.....? │
+  │  waiting  │
+  ╰──────────╯</pre>
+          <h2>No sessions detected</h2>
           <p>Session reports will appear here once agents start writing them.</p>
           <p class="hint">Share <code>claude-session-track.md</code> with your Claude Code sessions to get started.</p>
         </div>

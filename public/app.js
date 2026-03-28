@@ -40,11 +40,8 @@ document.querySelectorAll('.wizard-mode-btn').forEach(btn => {
     wizardMode = btn.dataset.mode;
     document.querySelectorAll('.wizard-mode-btn').forEach(b => b.classList.remove('selected'));
     btn.classList.add('selected');
-
-    // Go to step 2
     wizardStepMode.classList.add('hidden');
     wizardStepPaths.classList.remove('hidden');
-
     if (wizardMode === 'shared') {
       wizardShared.classList.remove('hidden');
       wizardIndividual.classList.add('hidden');
@@ -61,15 +58,10 @@ wizardBackBtn.addEventListener('click', () => {
   wizardError.classList.add('hidden');
 });
 
-// Individual folder management
 function renderWizardFolders() {
   wizardFolderList.innerHTML = wizardFolders.map((f, i) => `
-    <li>
-      <span>${escapeHtml(f)}</span>
-      <button class="remove-btn" data-index="${i}">&times;</button>
-    </li>
+    <li><span>${escapeHtml(f)}</span><button class="remove-btn" data-index="${i}">&times;</button></li>
   `).join('');
-
   wizardFolderList.querySelectorAll('.remove-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       wizardFolders.splice(parseInt(btn.dataset.index), 1);
@@ -87,9 +79,7 @@ wizardAddBtn.addEventListener('click', () => {
   }
 });
 
-wizardFolderInput.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') wizardAddBtn.click();
-});
+wizardFolderInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') wizardAddBtn.click(); });
 
 // --- Discover ---
 const wizardDiscoverInput = document.getElementById('wizard-discover-input');
@@ -101,19 +91,12 @@ const wizardSelectAll = document.getElementById('wizard-select-all');
 wizardDiscoverBtn.addEventListener('click', async () => {
   const root = wizardDiscoverInput.value.trim();
   if (!root) return;
-
   wizardDiscoverBtn.textContent = 'Scanning...';
   wizardDiscoverBtn.disabled = true;
-
   try {
     const res = await fetch(`/api/discover?root=${encodeURIComponent(root)}`);
     const data = await res.json();
-
-    if (!res.ok) {
-      showWizardError(data.error || 'Scan failed');
-      return;
-    }
-
+    if (!res.ok) { showWizardError(data.error || 'Scan failed'); return; }
     discoveredProjects = data.projects;
     renderDiscoverResults();
     wizardDiscoverResults.classList.remove('hidden');
@@ -125,14 +108,10 @@ wizardDiscoverBtn.addEventListener('click', async () => {
   }
 });
 
-wizardDiscoverInput.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') wizardDiscoverBtn.click();
-});
+wizardDiscoverInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') wizardDiscoverBtn.click(); });
 
 wizardSelectAll.addEventListener('click', () => {
-  discoveredProjects.forEach(p => {
-    if (p.hasClaude) p._selected = true;
-  });
+  discoveredProjects.forEach(p => { if (p.hasClaude) p._selected = true; });
   renderDiscoverResults();
   syncDiscoverToFolders();
 });
@@ -143,7 +122,6 @@ function renderDiscoverResults() {
     if (p.hasClaude) badges.push('<span class="discover-badge claude">CLAUDE.md</span>');
     else badges.push('<span class="discover-badge no-claude">no CLAUDE.md</span>');
     if (p.sessionCount > 0) badges.push(`<span class="discover-badge sessions">${p.sessionCount} session${p.sessionCount > 1 ? 's' : ''}</span>`);
-
     return `
       <li class="discover-item" data-index="${i}">
         <input type="checkbox" ${p._selected ? 'checked' : ''} data-index="${i}">
@@ -152,37 +130,28 @@ function renderDiscoverResults() {
           <div class="discover-item-path">${escapeHtml(p.sessionsPath)}</div>
         </div>
         <div class="discover-item-badges">${badges.join('')}</div>
-      </li>
-    `;
+      </li>`;
   }).join('');
-
-  // Click anywhere on row to toggle
   wizardDiscoverList.querySelectorAll('.discover-item').forEach(item => {
     item.addEventListener('click', (e) => {
-      if (e.target.type === 'checkbox') return; // let checkbox handle itself
+      if (e.target.type === 'checkbox') return;
       const idx = parseInt(item.dataset.index);
       discoveredProjects[idx]._selected = !discoveredProjects[idx]._selected;
       renderDiscoverResults();
       syncDiscoverToFolders();
     });
   });
-
   wizardDiscoverList.querySelectorAll('input[type="checkbox"]').forEach(cb => {
     cb.addEventListener('change', () => {
-      const idx = parseInt(cb.dataset.index);
-      discoveredProjects[idx]._selected = cb.checked;
+      discoveredProjects[parseInt(cb.dataset.index)]._selected = cb.checked;
       syncDiscoverToFolders();
     });
   });
 }
 
 function syncDiscoverToFolders() {
-  // Merge discovered selected folders into wizardFolders (avoid duplicates)
   const selectedPaths = discoveredProjects.filter(p => p._selected).map(p => p.sessionsPath);
-  // Keep manually added folders, add discovered ones
-  const manualFolders = wizardFolders.filter(f =>
-    !discoveredProjects.some(p => p.sessionsPath === f)
-  );
+  const manualFolders = wizardFolders.filter(f => !discoveredProjects.some(p => p.sessionsPath === f));
   wizardFolders = [...manualFolders, ...selectedPaths];
   renderWizardFolders();
 }
@@ -191,36 +160,20 @@ function syncDiscoverToFolders() {
 wizardSaveBtn.addEventListener('click', async () => {
   wizardError.classList.add('hidden');
   wizardSaveBtn.disabled = true;
-
   const body = { mode: wizardMode };
-
   if (wizardMode === 'shared') {
     const folder = wizardSharedInput.value.trim();
-    if (!folder) {
-      showWizardError('Please enter a folder path.');
-      return;
-    }
+    if (!folder) { showWizardError('Please enter a folder path.'); return; }
     body.sharedFolder = folder;
   } else {
-    if (wizardFolders.length === 0) {
-      showWizardError('Please add at least one folder.');
-      return;
-    }
+    if (wizardFolders.length === 0) { showWizardError('Please add at least one folder.'); return; }
     body.watchFolders = wizardFolders;
     body.discoverRoot = wizardDiscoverInput.value.trim();
   }
-
   try {
-    const res = await fetch('/api/config', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
+    const res = await fetch('/api/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     const data = await res.json();
-    if (!res.ok) {
-      showWizardError(data.error || 'Failed to save config');
-      return;
-    }
+    if (!res.ok) { showWizardError(data.error || 'Failed to save config'); return; }
     currentConfig = data.config;
     wizardOverlay.classList.add('hidden');
     appEl.classList.remove('hidden');
@@ -238,12 +191,11 @@ function showWizardError(msg) {
   wizardSaveBtn.disabled = false;
 }
 
-// --- Init: check config ---
+// --- Init ---
 async function init() {
   try {
     const res = await fetch('/api/config');
     currentConfig = await res.json();
-
     if (currentConfig.configured) {
       wizardOverlay.classList.add('hidden');
       appEl.classList.remove('hidden');
@@ -258,7 +210,6 @@ async function init() {
   }
 }
 
-// --- Fetch sessions ---
 async function fetchSessions() {
   try {
     const res = await fetch('/api/sessions');
@@ -269,21 +220,17 @@ async function fetchSessions() {
   }
 }
 
-// --- Render dashboard ---
+// --- Render ---
 function render() {
-  const filtered = activeFilter === 'all'
-    ? sessions
-    : sessions.filter(s => s.status === activeFilter);
+  const filtered = activeFilter === 'all' ? sessions : sessions.filter(s => s.status === activeFilter);
 
-  // Header stats
   const counts = {};
-  for (const s of sessions) {
-    counts[s.status] = (counts[s.status] || 0) + 1;
-  }
+  for (const s of sessions) counts[s.status] = (counts[s.status] || 0) + 1;
+
   headerStats.innerHTML = `
-    <span class="stat"><span class="stat-dot" style="background:var(--accent)"></span> ${counts.in_progress || 0} active</span>
-    <span class="stat"><span class="stat-dot" style="background:var(--green)"></span> ${counts.completed || 0} done</span>
-    <span class="stat"><span class="stat-dot" style="background:var(--yellow)"></span> ${counts.blocked || 0} blocked</span>
+    <span class="stat"><span class="stat-dot stat-dot-active"></span> ${counts.in_progress || 0} active</span>
+    <span class="stat"><span class="stat-dot stat-dot-done"></span> ${counts.completed || 0} done</span>
+    <span class="stat"><span class="stat-dot stat-dot-blocked"></span> ${counts.blocked || 0} blocked</span>
     <span class="stat">${sessions.length} total</span>
   `;
 
@@ -296,73 +243,86 @@ function render() {
 
   emptyState.style.display = 'none';
   grid.innerHTML = filtered.map(s => cardHTML(s)).join('');
-
   grid.querySelectorAll('.session-card').forEach(card => {
     card.addEventListener('click', () => {
-      const file = card.dataset.file;
-      const source = card.dataset.source;
-      const session = sessions.find(s => s.file === file && s.sourceFolder === source);
+      const session = sessions.find(s => s.file === card.dataset.file && s.sourceFolder === card.dataset.source);
       if (session) openModal(session);
     });
   });
 }
 
-function statusColor(status) {
-  const map = {
-    in_progress: 'var(--accent)',
-    completed: 'var(--green)',
-    blocked: 'var(--yellow)',
-    failed: 'var(--red)',
-    not_started: 'var(--text-muted)',
-  };
-  return map[status] || 'var(--text-muted)';
+function statusColorVar(status) {
+  return { in_progress: '--neon-blue', completed: '--neon-green', blocked: '--neon-yellow', failed: '--neon-red', not_started: '--text-muted' }[status] || '--text-muted';
+}
+
+function glowClass(status) {
+  return { in_progress: 'glow-blue', completed: 'glow-green', blocked: 'glow-yellow', failed: 'glow-red', not_started: 'glow-muted' }[status] || 'glow-muted';
 }
 
 function timeAgo(dateStr) {
   if (!dateStr) return '';
   const diff = Date.now() - new Date(dateStr).getTime();
   const mins = Math.floor(diff / 60000);
-  if (mins < 1) return 'just now';
-  if (mins < 60) return `${mins}m ago`;
+  if (mins < 1) return 'now';
+  if (mins < 60) return `${mins}m`;
   const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  const days = Math.floor(hrs / 24);
-  return `${days}d ago`;
+  if (hrs < 24) return `${hrs}h`;
+  return `${Math.floor(hrs / 24)}d`;
 }
 
 function cardHTML(s) {
   const status = s.status || 'not_started';
   const progress = s.progress || 0;
 
+  // Parse tasks
   const tasksSection = s.sections?.['Tasks'] || '';
-  const taskLines = tasksSection.split('\n').filter(l => l.match(/^- \[[ x]\]/i)).slice(0, 4);
-  const taskPreview = taskLines.map(line => {
-    const done = /- \[x\]/i.test(line);
-    const text = line.replace(/^- \[[ x]\]\s*/i, '');
-    return `<div class="task-item">
-      <span class="${done ? 'task-check' : 'task-pending'}">${done ? '&#10003;' : '&#9675;'}</span>
-      <span>${escapeHtml(text)}</span>
-    </div>`;
-  }).join('');
+  const allTasks = tasksSection.split('\n').filter(l => /^- \[[ x]\]/i.test(l));
+  const pendingTasks = allTasks.filter(l => /^- \[ \]/.test(l)).map(l => l.replace(/^- \[ \]\s*/i, ''));
+  const doneTasks = allTasks.filter(l => /^- \[x\]/i.test(l)).map(l => l.replace(/^- \[x\]\s*/i, ''));
 
+  // Notes preview
+  const notesSection = s.sections?.['Notes'] || '';
+  const notesPreview = notesSection.trim().split('\n')[0]?.substring(0, 120) || '';
+
+  // Badges
   const tags = (s.tags || []).map(t => `<span class="tag">${escapeHtml(t)}</span>`).join('');
   const sourceLabel = s.sourceName ? `<span class="source-tag">${escapeHtml(s.sourceName)}</span>` : '';
   const modeLabel = s.update_mode ? `<span class="update-mode-tag">${escapeHtml(s.update_mode)}</span>` : '';
-  const trackingLabel = s.tracking_start === 'mid_project'
-    ? '<span class="tracking-badge tracking-mid">mid-project</span>'
-    : s.tracking_start === 'full'
-      ? '<span class="tracking-badge tracking-full">full history</span>'
-      : '';
-  const sessionCountLabel = s.sessionCount > 1
-    ? `<span class="session-count-tag">${s.sessionCount} sessions</span>`
-    : s.sessionCount === 1
-      ? '<span class="session-count-tag">1 session</span>'
-      : '';
+  const trackingLabel = s.tracking_start === 'mid_project' ? '<span class="tracking-badge tracking-mid">mid-project</span>'
+    : s.tracking_start === 'full' ? '<span class="tracking-badge tracking-full">full</span>' : '';
+  const sessionCountLabel = s.sessionCount ? `<span class="session-count-tag">${s.sessionCount} sess</span>` : '';
+
+  // Pending tasks (shown prominently)
+  let nextUpHTML = '';
+  if (pendingTasks.length > 0) {
+    const shown = pendingTasks.slice(0, 3);
+    const more = pendingTasks.length > 3 ? `<div style="font-size:0.7rem;color:var(--text-muted);padding-left:1rem;margin-top:0.15rem">+${pendingTasks.length - 3} more</div>` : '';
+    nextUpHTML = `
+      <div class="card-next-up">
+        <div class="card-next-up-title">&gt; next up</div>
+        ${shown.map(t => `<div class="task-item"><span class="task-pending">&#9679;</span> <span>${escapeHtml(t)}</span></div>`).join('')}
+        ${more}
+      </div>`;
+  }
+
+  // Done tasks (compact)
+  let doneHTML = '';
+  if (doneTasks.length > 0) {
+    const shownDone = doneTasks.slice(-3);
+    doneHTML = `
+      <div class="card-done">
+        <div class="card-done-title">${doneTasks.length} completed</div>
+        ${shownDone.map(t => `<div class="task-item"><span class="task-check">&#10003;</span> <span>${escapeHtml(t)}</span></div>`).join('')}
+      </div>`;
+  }
 
   // Latest activity
-  const latestActivity = s.activityLog && s.activityLog.length > 0
-    ? `<div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.5rem;padding-left:0.5rem;">Latest: ${escapeHtml(s.activityLog[s.activityLog.length - 1].title)}</div>`
-    : '';
+  const latest = s.activityLog && s.activityLog.length > 0 ? s.activityLog[s.activityLog.length - 1] : null;
+  const latestHTML = latest ? `<div class="card-latest"><span>&gt;</span> ${escapeHtml(latest.title)}</div>` : '';
+
+  // Notes
+  const notesHTML = notesPreview && notesPreview !== '_None._' && !notesPreview.startsWith('_None')
+    ? `<div class="card-notes">"${escapeHtml(notesPreview)}${notesPreview.length >= 120 ? '...' : ''}"</div>` : '';
 
   return `
     <div class="session-card" data-file="${escapeHtml(s.file)}" data-source="${escapeHtml(s.sourceFolder)}" data-status="${status}">
@@ -372,47 +332,40 @@ function cardHTML(s) {
         <span class="status-badge status-${status}">${status.replace('_', ' ')}</span>
       </div>
       <div class="card-meta">
-        ${sourceLabel}
-        ${trackingLabel}
-        ${sessionCountLabel}
-        ${modeLabel}
-        ${s.current_branch || s.branch ? `<span>&#127807; ${escapeHtml(s.current_branch || s.branch)}</span>` : ''}
-        ${s.updated_at ? `<span>Updated ${timeAgo(s.updated_at)}</span>` : ''}
+        ${sourceLabel}${trackingLabel}${sessionCountLabel}${modeLabel}
+        ${s.current_branch || s.branch ? `<span>&#9702; ${escapeHtml(s.current_branch || s.branch)}</span>` : ''}
+        ${s.updated_at ? `<span>${timeAgo(s.updated_at)} ago</span>` : ''}
       </div>
       <div class="progress-bar-container">
-        <div class="progress-bar-fill" style="width:${progress}%;background:${statusColor(status)}"></div>
+        <div class="progress-bar-fill ${glowClass(status)}" style="width:${progress}%"></div>
       </div>
       <div class="progress-info">
         <span>${s.tasks.done}/${s.tasks.total} tasks</span>
         <span>${progress}%</span>
       </div>
-      ${taskPreview ? `<div class="card-tasks">${taskPreview}</div>` : ''}
-      ${latestActivity}
+      ${nextUpHTML}
+      ${doneHTML}
+      ${latestHTML}
+      ${notesHTML}
       ${tags ? `<div class="card-tags">${tags}</div>` : ''}
-    </div>
-  `;
+    </div>`;
 }
 
-// --- Session detail modal ---
+// --- Modal ---
 function openModal(s) {
   const status = s.status || 'not_started';
   const progress = s.progress || 0;
-  const circumference = 2 * Math.PI * 28;
+  const circumference = 2 * Math.PI * 30;
   const offset = circumference - (progress / 100) * circumference;
+  const colorVar = statusColorVar(status);
 
-  // Build mid-project notice
   const isMidProject = s.tracking_start === 'mid_project';
-  let midProjectNotice = '';
-  if (isMidProject) {
-    midProjectNotice = `
-      <div class="mid-project-notice">
-        <div class="mid-project-label">Mid-Project Tracking</div>
-        <div class="mid-project-desc">Tracking started after the project was already in progress. The Project Summary below covers prior work. The Activity Log only covers work done from the tracking start point.</div>
-      </div>
-    `;
-  }
+  let midProjectNotice = isMidProject ? `
+    <div class="mid-project-notice">
+      <div class="mid-project-label">&gt; mid-project tracking</div>
+      <div class="mid-project-desc">Tracking started after the project was already in progress. The Project Summary covers prior work. The Activity Log only covers work from the tracking start point.</div>
+    </div>` : '';
 
-  // Session history summary
   let sessionHistoryHTML = '';
   if (s.sessionHistory && s.sessionHistory.length > 0) {
     sessionHistoryHTML = `
@@ -423,16 +376,14 @@ function openModal(s) {
             <span class="session-history-chip ${i === s.sessionHistory.length - 1 ? 'current' : ''}">${escapeHtml(sh.sessionId)}</span>
           `).join('')}
         </div>
-      </div>
-    `;
+      </div>`;
   }
 
-  // Build activity timeline HTML
   let timelineHTML = '';
   if (s.activityLog && s.activityLog.length > 0) {
     timelineHTML = `
-      <h2 style="color:var(--accent);margin-top:1.5rem;margin-bottom:0.75rem;">Activity Timeline</h2>
-      ${isMidProject ? '<div class="timeline-partial-notice">Showing activity from tracking start point only</div>' : ''}
+      <h2 style="color:var(--neon-blue);margin-top:1.5rem;margin-bottom:0.75rem;">Activity Timeline</h2>
+      ${isMidProject ? '<div class="timeline-partial-notice">// from tracking start point only</div>' : ''}
       <div class="activity-timeline">
         ${s.activityLog.map(entry => {
           const isBoundary = entry.type === 'session_start' || entry.type === 'session_end';
@@ -441,74 +392,86 @@ function openModal(s) {
               <div class="activity-time">${escapeHtml(entry.timestamp)}</div>
               <div class="activity-title">${escapeHtml(entry.title)}</div>
               ${entry.body ? `<div class="activity-body">${escapeHtml(entry.body)}</div>` : ''}
-            </div>
-          `;
+            </div>`;
         }).join('')}
-      </div>
-    `;
+      </div>`;
+  }
+
+  // Pending tasks for modal top
+  const tasksSection = s.sections?.['Tasks'] || '';
+  const allTasks = tasksSection.split('\n').filter(l => /^- \[[ x]\]/i.test(l));
+  const pendingTasks = allTasks.filter(l => /^- \[ \]/.test(l)).map(l => l.replace(/^- \[ \]\s*/i, ''));
+  const notesSection = s.sections?.['Notes'] || '';
+
+  let pendingHTML = '';
+  if (pendingTasks.length > 0) {
+    pendingHTML = `
+      <div class="card-next-up" style="margin-bottom:1rem">
+        <div class="card-next-up-title">&gt; remaining tasks (${pendingTasks.length})</div>
+        ${pendingTasks.map(t => `<div class="task-item"><span class="task-pending">&#9679;</span> <span>${escapeHtml(t)}</span></div>`).join('')}
+      </div>`;
+  }
+
+  let notesTopHTML = '';
+  if (notesSection.trim() && !notesSection.trim().startsWith('_None')) {
+    notesTopHTML = `
+      <div class="card-notes" style="margin-bottom:1rem;border-top:none;border:1px solid var(--border);border-radius:var(--radius);padding:0.75rem 1rem">
+        <div style="font-family:var(--font-mono);font-size:0.68rem;color:var(--neon-purple);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.35rem;font-weight:700;font-style:normal">&gt; handoff notes</div>
+        <div style="font-style:normal;color:var(--text);font-size:0.82rem;line-height:1.5">${escapeHtml(notesSection.trim())}</div>
+      </div>`;
   }
 
   modalBody.innerHTML = `
     <h2>${escapeHtml(s.title || s.file)}</h2>
     <div class="modal-meta">
       <span class="status-badge status-${status}">${status.replace('_', ' ')}</span>
-      ${s.repository ? `<span>&#128230; ${escapeHtml(s.repository)}</span>` : ''}
-      ${s.agent_model ? `<span>&#129302; ${escapeHtml(s.agent_model)}</span>` : ''}
-      ${s.update_mode ? `<span class="update-mode-tag">${escapeHtml(s.update_mode)} mode</span>` : ''}
+      ${s.repository ? `<span>${escapeHtml(s.repository)}</span>` : ''}
+      ${s.agent_model ? `<span>${escapeHtml(s.agent_model)}</span>` : ''}
+      ${s.update_mode ? `<span class="update-mode-tag">${escapeHtml(s.update_mode)}</span>` : ''}
       ${s.tracking_start === 'mid_project' ? '<span class="tracking-badge tracking-mid">mid-project</span>' : ''}
-      ${s.tracking_start === 'full' ? '<span class="tracking-badge tracking-full">full history</span>' : ''}
+      ${s.tracking_start === 'full' ? '<span class="tracking-badge tracking-full">full</span>' : ''}
       ${s.sessionCount ? `<span class="session-count-tag">${s.sessionCount} session${s.sessionCount > 1 ? 's' : ''}</span>` : ''}
       ${s.sourceName ? `<span class="source-tag">${escapeHtml(s.sourceName)}</span>` : ''}
-      ${s.current_session ? `<span>Current: ${escapeHtml(s.current_session)}</span>` : ''}
-      ${s.current_branch || s.branch ? `<span>&#127807; ${escapeHtml(s.current_branch || s.branch)}</span>` : ''}
-      ${s.created_at ? `<span>Tracking since: ${new Date(s.created_at).toLocaleString()}</span>` : ''}
-      ${s.updated_at ? `<span>Updated: ${new Date(s.updated_at).toLocaleString()}</span>` : ''}
+      ${s.current_session ? `<span>current: ${escapeHtml(s.current_session)}</span>` : ''}
+      ${s.current_branch || s.branch ? `<span>&#9702; ${escapeHtml(s.current_branch || s.branch)}</span>` : ''}
+      ${s.created_at ? `<span>since ${new Date(s.created_at).toLocaleDateString()}</span>` : ''}
+      ${s.updated_at ? `<span>updated ${new Date(s.updated_at).toLocaleString()}</span>` : ''}
     </div>
     ${midProjectNotice}
     ${sessionHistoryHTML}
     <div class="modal-progress">
       <div class="progress-ring">
-        <svg width="64" height="64">
-          <circle class="progress-ring-bg" cx="32" cy="32" r="28"/>
-          <circle class="progress-ring-fill" cx="32" cy="32" r="28"
-            style="stroke:${statusColor(status)};stroke-dasharray:${circumference};stroke-dashoffset:${offset}"/>
+        <svg width="72" height="72">
+          <circle class="progress-ring-bg" cx="36" cy="36" r="30"/>
+          <circle class="progress-ring-fill" cx="36" cy="36" r="30"
+            style="stroke:var(${colorVar});stroke-dasharray:${circumference};stroke-dashoffset:${offset}"/>
         </svg>
         <div class="progress-ring-text">${progress}%</div>
       </div>
       <div>
-        <div style="font-weight:600">${s.tasks.done} of ${s.tasks.total} tasks complete</div>
-        <div style="font-size:0.8rem;color:var(--text-muted)">${s.tasks.total - s.tasks.done} remaining</div>
+        <div style="font-weight:700;color:var(--text-bright)">${s.tasks.done} of ${s.tasks.total} tasks complete</div>
+        <div style="font-size:0.8rem;color:var(--text-muted);font-family:var(--font-mono)">${s.tasks.total - s.tasks.done} remaining</div>
       </div>
     </div>
+    ${pendingHTML}
+    ${notesTopHTML}
     ${timelineHTML}
     <div class="session-content">${s.html}</div>
   `;
   modalOverlay.classList.add('open');
 }
 
-function closeModal(overlay) {
-  overlay.classList.remove('open');
-}
+function closeModal(overlay) { overlay.classList.remove('open'); }
 
 // --- Settings ---
-settingsBtn.addEventListener('click', () => {
-  renderSettings();
-  settingsOverlay.classList.add('open');
-});
-
+settingsBtn.addEventListener('click', () => { renderSettings(); settingsOverlay.classList.add('open'); });
 settingsClose.addEventListener('click', () => closeModal(settingsOverlay));
-settingsOverlay.addEventListener('click', (e) => {
-  if (e.target === settingsOverlay) closeModal(settingsOverlay);
-});
+settingsOverlay.addEventListener('click', (e) => { if (e.target === settingsOverlay) closeModal(settingsOverlay); });
 
 function renderSettings() {
   if (!currentConfig) return;
-
   const mode = currentConfig.mode || 'not configured';
-  const folders = currentConfig.mode === 'shared'
-    ? [currentConfig.sharedFolder]
-    : (currentConfig.watchFolders || []);
-
+  const folders = currentConfig.mode === 'shared' ? [currentConfig.sharedFolder] : (currentConfig.watchFolders || []);
   const isIndividual = currentConfig.mode === 'individual';
 
   settingsBody.innerHTML = `
@@ -520,18 +483,14 @@ function renderSettings() {
       <h3>Watched Folders</h3>
       <ul class="settings-folders" id="settings-folder-list">
         ${folders.map(f => `
-          <li>
-            <span>${escapeHtml(f)}</span>
-            ${isIndividual ? `<button class="remove-btn" data-folder="${escapeHtml(f)}">&times;</button>` : ''}
-          </li>
+          <li><span>${escapeHtml(f)}</span>${isIndividual ? `<button class="remove-btn" data-folder="${escapeHtml(f)}">&times;</button>` : ''}</li>
         `).join('')}
       </ul>
       ${isIndividual ? `
         <div class="settings-folder-add">
           <input type="text" class="wizard-input" id="settings-new-folder" placeholder="Add folder path...">
           <button class="wizard-add-btn" id="settings-add-folder-btn">Add</button>
-        </div>
-      ` : ''}
+        </div>` : ''}
     </div>
     ${isIndividual ? `
     <div class="settings-section">
@@ -542,135 +501,79 @@ function renderSettings() {
       </div>
       <p class="wizard-hint">Scan a root folder for projects with CLAUDE.md and add them.</p>
       <div id="settings-discover-results"></div>
-    </div>
-    ` : ''}
+    </div>` : ''}
     <div class="settings-section">
       <h3>Reset</h3>
       <button class="settings-reset-btn" id="settings-reset-btn">Reset Configuration</button>
       <p class="wizard-hint" style="margin-top:0.4rem">This will clear your config and show the setup wizard again.</p>
-    </div>
-  `;
+    </div>`;
 
-  // Add folder (individual mode)
   if (isIndividual) {
     const addBtn = document.getElementById('settings-add-folder-btn');
     const input = document.getElementById('settings-new-folder');
-
     addBtn.addEventListener('click', async () => {
       const val = input.value.trim();
       if (!val) return;
-      await fetch('/api/config/folders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ path: val }),
-      });
+      await fetch('/api/config/folders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path: val }) });
       input.value = '';
       await refreshConfig();
       renderSettings();
     });
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') addBtn.click(); });
 
-    input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') addBtn.click();
-    });
-
-    // Remove folder buttons
     document.querySelectorAll('#settings-folder-list .remove-btn').forEach(btn => {
       btn.addEventListener('click', async () => {
-        await fetch('/api/config/folders', {
-          method: 'DELETE',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ path: btn.dataset.folder }),
-        });
+        await fetch('/api/config/folders', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path: btn.dataset.folder }) });
         await refreshConfig();
         renderSettings();
       });
     });
 
-    // Discover in settings
     const discoverBtn = document.getElementById('settings-discover-btn');
     const discoverInput = document.getElementById('settings-discover-input');
     const discoverResults = document.getElementById('settings-discover-results');
-
     if (discoverBtn) {
       discoverBtn.addEventListener('click', async () => {
         const root = discoverInput.value.trim();
         if (!root) return;
-
         discoverBtn.textContent = 'Scanning...';
         discoverBtn.disabled = true;
-
         try {
           const res = await fetch(`/api/discover?root=${encodeURIComponent(root)}`);
           const data = await res.json();
-
-          if (!res.ok) {
-            discoverResults.innerHTML = `<p style="color:var(--red);font-size:0.85rem;margin-top:0.5rem">${escapeHtml(data.error)}</p>`;
-            return;
-          }
-
-          // Show discovered projects with add buttons
+          if (!res.ok) { discoverResults.innerHTML = `<p style="color:var(--neon-red);font-size:0.82rem;margin-top:0.5rem">${escapeHtml(data.error)}</p>`; return; }
           const currentFolders = currentConfig.watchFolders || [];
           discoverResults.innerHTML = `
             <ul class="discover-list" style="margin-top:0.75rem">
               ${data.projects.map(p => {
-                const alreadyAdded = currentFolders.some(f => f === p.sessionsPath || f === p.sessionsPath.replace(/\//g, '\\'));
+                const added = currentFolders.some(f => f === p.sessionsPath || f === p.sessionsPath.replace(/\//g, '\\'));
                 const badges = [];
                 if (p.hasClaude) badges.push('<span class="discover-badge claude">CLAUDE.md</span>');
                 if (p.sessionCount > 0) badges.push('<span class="discover-badge sessions">' + p.sessionCount + ' session' + (p.sessionCount > 1 ? 's' : '') + '</span>');
-                return '<li class="discover-item">' +
-                  '<div class="discover-item-info">' +
-                    '<div class="discover-item-name">' + escapeHtml(p.name) + '</div>' +
-                    '<div class="discover-item-path">' + escapeHtml(p.sessionsPath) + '</div>' +
-                  '</div>' +
-                  '<div class="discover-item-badges">' + badges.join('') + '</div>' +
-                  (alreadyAdded
-                    ? '<span style="color:var(--green);font-size:0.8rem">Added</span>'
-                    : '<button class="wizard-add-btn settings-discover-add" data-path="' + escapeHtml(p.sessionsPath) + '" style="padding:0.25rem 0.75rem;font-size:0.75rem">Add</button>'
-                  ) +
-                '</li>';
+                return '<li class="discover-item"><div class="discover-item-info"><div class="discover-item-name">' + escapeHtml(p.name) + '</div><div class="discover-item-path">' + escapeHtml(p.sessionsPath) + '</div></div><div class="discover-item-badges">' + badges.join('') + '</div>' + (added ? '<span style="color:var(--neon-green);font-size:0.75rem;font-family:var(--font-mono)">added</span>' : '<button class="wizard-add-btn settings-discover-add" data-path="' + escapeHtml(p.sessionsPath) + '" style="padding:0.2rem 0.6rem;font-size:0.72rem">Add</button>') + '</li>';
               }).join('')}
-            </ul>
-          `;
-
-          // Add button handlers
+            </ul>`;
           discoverResults.querySelectorAll('.settings-discover-add').forEach(btn => {
             btn.addEventListener('click', async () => {
-              await fetch('/api/config/folders', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ path: btn.dataset.path }),
-              });
-              // Save discover root
-              await fetch('/api/config', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ...currentConfig, discoverRoot: root }),
-              });
+              await fetch('/api/config/folders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path: btn.dataset.path }) });
+              await fetch('/api/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...currentConfig, discoverRoot: root }) });
               await refreshConfig();
               renderSettings();
             });
           });
         } catch (err) {
-          discoverResults.innerHTML = `<p style="color:var(--red);font-size:0.85rem;margin-top:0.5rem">${escapeHtml(err.message)}</p>`;
+          discoverResults.innerHTML = `<p style="color:var(--neon-red);font-size:0.82rem;margin-top:0.5rem">${escapeHtml(err.message)}</p>`;
         } finally {
           discoverBtn.textContent = 'Scan';
           discoverBtn.disabled = false;
         }
       });
-
-      discoverInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') discoverBtn.click();
-      });
+      discoverInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') discoverBtn.click(); });
     }
   }
 
-  // Reset
   document.getElementById('settings-reset-btn').addEventListener('click', async () => {
-    await fetch('/api/config', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ mode: null }),
-    });
+    await fetch('/api/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode: null }) });
     location.reload();
   });
 }
@@ -680,7 +583,6 @@ async function refreshConfig() {
   currentConfig = await res.json();
 }
 
-// --- Utilities ---
 function escapeHtml(str) {
   if (!str) return '';
   const div = document.createElement('div');
@@ -688,17 +590,10 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
-// --- Event listeners ---
+// --- Events ---
 modalClose.addEventListener('click', () => closeModal(modalOverlay));
-modalOverlay.addEventListener('click', (e) => {
-  if (e.target === modalOverlay) closeModal(modalOverlay);
-});
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') {
-    closeModal(modalOverlay);
-    closeModal(settingsOverlay);
-  }
-});
+modalOverlay.addEventListener('click', (e) => { if (e.target === modalOverlay) closeModal(modalOverlay); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeModal(modalOverlay); closeModal(settingsOverlay); } });
 
 filtersContainer.addEventListener('click', (e) => {
   if (!e.target.classList.contains('filter-btn')) return;
@@ -708,9 +603,7 @@ filtersContainer.addEventListener('click', (e) => {
   render();
 });
 
-// SSE live reload
 const evtSource = new EventSource('/api/events');
 evtSource.onmessage = () => fetchSessions();
 
-// --- Boot ---
 init();
