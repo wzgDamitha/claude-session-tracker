@@ -31,8 +31,8 @@ Your Projects                          Dashboard (localhost:3890)
 ## Quick Start
 
 ```bash
-git clone https://github.com/wzgDamitha/claude-project-tracker.git
-cd claude-project-tracker
+git clone https://github.com/wzgDamitha/claude-session-tracker.git
+cd claude-session-tracker
 npm install
 npm start
 ```
@@ -156,7 +156,7 @@ The dashboard auto-updates when session files change — no manual refresh neede
 ## Project Structure
 
 ```
-claude-project-tracker/
+claude-session-tracker/
 ├── server/
 │   ├── index.js              // Express server, API, SSE, file watcher
 │   └── config.js             // Config load/save/validate

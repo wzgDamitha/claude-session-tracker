@@ -1,6 +1,6 @@
 ---
 title: Claude Session Tracker
-repository: wzgDamitha/claude-project-tracker
+repository: wzgDamitha/claude-session-tracker
 status: in_progress
 priority: high
 tracking_start: full
