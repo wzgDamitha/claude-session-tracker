@@ -2,7 +2,17 @@
 let sessions = [];
 let activeFilter = 'all';
 let currentView = 'grid';
+let searchQuery = '';
 let currentConfig = null;
+
+const PRIORITY_ORDER = { critical: 0, high: 1, medium: 2, low: 3, none: 4 };
+const PRIORITY_CONFIG = {
+  critical: { label: '!!!', color: '--red' },
+  high: { label: '!!', color: '--yellow' },
+  medium: { label: '!', color: '--accent' },
+  low: { label: '~', color: '--text-tertiary' },
+  none: { label: '', color: '' },
+};
 
 // --- DOM refs ---
 const wizardOverlay = document.getElementById('wizard-overlay');
@@ -26,6 +36,7 @@ const settingsBtn = document.getElementById('settings-btn');
 const settingsOverlay = document.getElementById('settings-overlay');
 const settingsClose = document.getElementById('settings-close');
 const settingsBody = document.getElementById('settings-body');
+const searchInput = document.getElementById('search-input');
 const detailScreen = document.getElementById('detail-screen');
 const detailBody = document.getElementById('detail-body');
 const detailBack = document.getElementById('detail-back');
@@ -225,7 +236,29 @@ async function fetchSessions() {
 
 // --- Render ---
 function render() {
-  const filtered = activeFilter === 'all' ? sessions : sessions.filter(s => s.status === activeFilter);
+  // Filter by status
+  let filtered = activeFilter === 'all' ? [...sessions] : sessions.filter(s => s.status === activeFilter);
+
+  // Search
+  const q = searchQuery.toLowerCase();
+  if (q) {
+    filtered = filtered.filter(s =>
+      (s.title || '').toLowerCase().includes(q) ||
+      (s.tags || []).some(t => t.toLowerCase().includes(q)) ||
+      (s.current_branch || s.branch || '').toLowerCase().includes(q) ||
+      (s.repository || '').toLowerCase().includes(q)
+    );
+  }
+
+  // Sort by priority first, then by updated_at
+  filtered.sort((a, b) => {
+    const pa = PRIORITY_ORDER[a.priority || 'none'] ?? 4;
+    const pb = PRIORITY_ORDER[b.priority || 'none'] ?? 4;
+    if (pa !== pb) return pa - pb;
+    const da = a.updated_at ? new Date(a.updated_at) : new Date(0);
+    const db = b.updated_at ? new Date(b.updated_at) : new Date(0);
+    return db - da;
+  });
 
   const counts = {};
   for (const s of sessions) counts[s.status] = (counts[s.status] || 0) + 1;
@@ -246,7 +279,16 @@ function render() {
 
   emptyState.style.display = 'none';
 
-  if (currentView === 'list') {
+  if (currentView === 'timeline') {
+    grid.className = 'sessions-timeline';
+    grid.innerHTML = timelineViewHTML(filtered);
+    grid.querySelectorAll('.timeline-row').forEach(row => {
+      row.addEventListener('click', () => {
+        const session = sessions.find(s => s.file === row.dataset.file && s.sourceFolder === row.dataset.source);
+        if (session) openDetail(session);
+      });
+    });
+  } else if (currentView === 'list') {
     grid.className = 'sessions-list';
     grid.innerHTML = listHeaderHTML() + filtered.map(s => listRowHTML(s)).join('');
     grid.querySelectorAll('.list-row').forEach(row => {
@@ -307,6 +349,9 @@ function cardHTML(s) {
   const trackingLabel = s.tracking_start === 'mid_project' ? '<span class="tracking-badge tracking-mid">mid-project</span>'
     : s.tracking_start === 'full' ? '<span class="tracking-badge tracking-full">full</span>' : '';
   const sessionCountLabel = s.sessionCount ? `<span class="session-count-tag">${s.sessionCount} sess</span>` : '';
+  const pri = s.priority || 'none';
+  const priConf = PRIORITY_CONFIG[pri];
+  const priorityBadge = pri !== 'none' ? `<span class="priority-badge priority-${pri}">${priConf.label}</span>` : '';
 
   // Pending tasks (shown prominently)
   let nextUpHTML = '';
@@ -350,7 +395,7 @@ function cardHTML(s) {
     <div class="session-card" data-file="${escapeHtml(s.file)}" data-source="${escapeHtml(s.sourceFolder)}" data-status="${status}">
       <div class="status-stripe stripe-${status}"></div>
       <div class="card-header">
-        <span class="card-title">${escapeHtml(s.title || s.file)}</span>
+        <span class="card-title">${escapeHtml(s.title || s.file)}${priorityBadge}</span>
         <span class="status-badge status-${status}">${status.replace('_', ' ')}</span>
       </div>
       <div class="card-meta">
@@ -390,6 +435,7 @@ function listHeaderHTML() {
     <span></span>
     <span>Project</span>
     <span>Branch</span>
+    <span>Priority</span>
     <span>Status</span>
     <span>Tasks</span>
     <span>Updated</span>
@@ -416,10 +462,71 @@ function listRowHTML(s) {
       </div>
       <div class="list-row-title">${escapeHtml(s.title || s.file)}</div>
       <div class="list-row-meta">${escapeHtml(s.current_branch || s.branch || '')}</div>
+      <div class="priority-badge priority-${s.priority || 'none'}">${(PRIORITY_CONFIG[s.priority || 'none'] || {}).label || ''}</div>
       <div><span class="status-badge status-${status}">${status.replace('_', ' ')}</span></div>
       <div class="list-row-tasks">${s.tasks.done}/${s.tasks.total}</div>
       <div class="list-row-time">${s.updated_at ? timeAgo(s.updated_at) + ' ago' : ''}</div>
     </div>`;
+}
+
+// --- Timeline view ---
+function timelineViewHTML(sessions) {
+  if (sessions.length === 0) return '<div class="timeline-empty">No sessions to display</div>';
+
+  // Compute date range
+  let minDate = Infinity, maxDate = -Infinity;
+  const now = Date.now();
+  for (const s of sessions) {
+    const start = s.created_at ? new Date(s.created_at).getTime() : (s.updated_at ? new Date(s.updated_at).getTime() : now);
+    const end = s.updated_at ? new Date(s.updated_at).getTime() : start;
+    if (start < minDate) minDate = start;
+    if (end > maxDate) maxDate = end;
+  }
+
+  // Pad by 1 day on each side
+  const DAY = 86400000;
+  minDate -= DAY;
+  maxDate = Math.max(maxDate + DAY, now + DAY);
+  const span = maxDate - minDate;
+
+  // Generate axis labels (roughly 8-12 labels)
+  const labelCount = Math.min(12, Math.max(4, Math.ceil(span / DAY)));
+  const step = span / labelCount;
+  let axisHTML = '';
+  for (let i = 0; i <= labelCount; i++) {
+    const d = new Date(minDate + step * i);
+    const label = `${d.getMonth() + 1}/${d.getDate()}`;
+    axisHTML += `<span class="timeline-axis-label">${label}</span>`;
+  }
+
+  // Today marker position
+  const todayPct = ((now - minDate) / span) * 100;
+
+  // Build rows
+  const rowsHTML = sessions.map(s => {
+    const status = s.status || 'not_started';
+    const start = s.created_at ? new Date(s.created_at).getTime() : (s.updated_at ? new Date(s.updated_at).getTime() : now);
+    const end = s.updated_at ? new Date(s.updated_at).getTime() : start;
+    const leftPct = ((start - minDate) / span) * 100;
+    const widthPct = Math.max(1.5, ((end - start) / span) * 100);
+    const pri = s.priority || 'none';
+    const priLabel = PRIORITY_CONFIG[pri]?.label || '';
+
+    return `
+      <div class="timeline-row" data-file="${escapeHtml(s.file)}" data-source="${escapeHtml(s.sourceFolder)}">
+        <div class="timeline-label">${priLabel ? `<span class="priority-badge priority-${pri}">${priLabel}</span> ` : ''}${escapeHtml(s.title || s.file)}</div>
+        <div class="timeline-track">
+          <div class="timeline-today" style="left:${todayPct}%"></div>
+          <div class="timeline-bar timeline-bar-${status}" style="left:${leftPct}%;width:${widthPct}%">
+            <span class="timeline-bar-text">${s.progress || 0}%</span>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+
+  return `
+    <div class="timeline-axis">${axisHTML}</div>
+    ${rowsHTML}`;
 }
 
 // --- Detail (full screen) ---
@@ -503,6 +610,9 @@ function openDetail(s) {
       ${s.tracking_start === 'mid_project' ? '<span class="tracking-badge tracking-mid">mid-project</span>' : ''}
       ${s.tracking_start === 'full' ? '<span class="tracking-badge tracking-full">full</span>' : ''}
       ${s.sessionCount ? `<span class="session-count-tag">${s.sessionCount} session${s.sessionCount > 1 ? 's' : ''}</span>` : ''}
+      <select class="priority-select" id="priority-select" data-file="${escapeHtml(s.file)}" data-source="${escapeHtml(s.sourceFolder)}">
+        ${['none','low','medium','high','critical'].map(p => `<option value="${p}" ${(s.priority||'none')===p?'selected':''}>${p}</option>`).join('')}
+      </select>
       ${s.sourceName ? `<span class="source-tag">${escapeHtml(s.sourceName)}</span>` : ''}
       ${s.current_session ? `<span>current: ${escapeHtml(s.current_session)}</span>` : ''}
       ${s.current_branch || s.branch ? `<span>&#9702; ${escapeHtml(s.current_branch || s.branch)}</span>` : ''}
@@ -546,6 +656,16 @@ function openDetail(s) {
   detailScreen.classList.remove('hidden');
   appEl.classList.add('hidden');
   window.scrollTo(0, 0);
+
+  // Priority select
+  document.getElementById('priority-select').addEventListener('change', async (e) => {
+    await fetch(`/api/sessions/${encodeURIComponent(s.file)}?source=${encodeURIComponent(s.sourceFolder)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ priority: e.target.value }),
+    });
+    await fetchSessions();
+  });
 
   // Load notes
   loadNotes(s.sourceFolder);
@@ -781,6 +901,11 @@ filtersContainer.addEventListener('click', (e) => {
   filtersContainer.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
   e.target.classList.add('active');
   activeFilter = e.target.dataset.filter;
+  render();
+});
+
+searchInput.addEventListener('input', (e) => {
+  searchQuery = e.target.value.trim();
   render();
 });
 

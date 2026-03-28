@@ -402,6 +402,42 @@ app.get('/api/sessions/:file', (req, res) => {
   res.status(404).json({ error: 'Session not found' });
 });
 
+// --- Update session frontmatter (priority, etc.) ---
+app.patch('/api/sessions/:file', (req, res) => {
+  const sourceFolder = req.query.source;
+  const watchPaths = config.getWatchPaths();
+  const searchPaths = sourceFolder ? [sourceFolder] : watchPaths;
+  const validPriorities = ['critical', 'high', 'medium', 'low', 'none'];
+
+  for (const dir of searchPaths) {
+    const resolved = path.resolve(dir);
+    const filePath = path.join(resolved, req.params.file);
+    if (!filePath.startsWith(resolved)) continue;
+    if (!fs.existsSync(filePath)) continue;
+
+    try {
+      const raw = fs.readFileSync(filePath, 'utf-8');
+      const { data, content } = matter(raw);
+
+      if (req.body.priority !== undefined) {
+        if (!validPriorities.includes(req.body.priority)) {
+          return res.status(400).json({ error: 'Invalid priority' });
+        }
+        data.priority = req.body.priority;
+      }
+
+      const updated = matter.stringify(content, data);
+      fs.writeFileSync(filePath, updated, 'utf-8');
+      notifyClients();
+      return res.json({ success: true });
+    } catch (err) {
+      return res.status(500).json({ error: err.message });
+    }
+  }
+
+  res.status(404).json({ error: 'Session not found' });
+});
+
 // --- Notes API ---
 function isValidSourceFolder(sourceFolder) {
   if (!sourceFolder) return false;

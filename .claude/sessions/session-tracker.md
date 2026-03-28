@@ -1,15 +1,20 @@
 ---
-title: "Claude Session Tracker"
-repository: "wzgDamitha/claude-project-tracker"
-status: "in_progress"
-tracking_start: "full"
-created_at: "2026-03-28T09:00:00Z"
-updated_at: "2026-03-28T14:30:00Z"
-current_session: "session_015WXoyPeSg5LLXjwMqzqnYM"
-current_branch: "claude/session-tracking-webapp-6euEH"
-agent_model: "claude-opus-4-6"
-update_mode: "manual"
-tags: ["dashboard", "tracking", "node", "express"]
+title: Claude Session Tracker
+repository: wzgDamitha/claude-project-tracker
+status: in_progress
+priority: high
+tracking_start: full
+created_at: '2026-03-28T09:00:00Z'
+updated_at: '2026-03-28T14:30:00Z'
+current_session: session_015WXoyPeSg5LLXjwMqzqnYM
+current_branch: claude/session-tracking-webapp-6euEH
+agent_model: claude-opus-4-6
+update_mode: manual
+tags:
+  - dashboard
+  - tracking
+  - node
+  - express
 progress: 80
 ---
 
