@@ -402,6 +402,82 @@ app.get('/api/sessions/:file', (req, res) => {
   res.status(404).json({ error: 'Session not found' });
 });
 
+// --- Notes API ---
+function isValidSourceFolder(sourceFolder) {
+  if (!sourceFolder) return false;
+  const resolved = path.resolve(sourceFolder);
+  return config.getWatchPaths().some(p => resolved === path.resolve(p) || resolved.startsWith(path.resolve(p)));
+}
+
+function parseNotes(content) {
+  const entries = [];
+  const entryRegex = /### \[([^\]]+)\]\s*(.*)\n([\s\S]*?)(?=\n### \[|$)/g;
+  let match;
+  while ((match = entryRegex.exec(content)) !== null) {
+    entries.push({
+      timestamp: match[1].trim(),
+      author: match[2].trim() || 'User',
+      body: match[3].trim(),
+    });
+  }
+  return entries;
+}
+
+app.get('/api/notes', (req, res) => {
+  const sourceFolder = req.query.source;
+  if (!isValidSourceFolder(sourceFolder)) {
+    return res.status(400).json({ error: 'Invalid source folder' });
+  }
+
+  const notesPath = path.join(path.resolve(sourceFolder), 'notes.md');
+  if (!fs.existsSync(notesPath)) {
+    return res.json({ entries: [], raw: '' });
+  }
+
+  try {
+    const raw = fs.readFileSync(notesPath, 'utf-8');
+    const entries = parseNotes(raw);
+    res.json({ entries, raw });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/notes', (req, res) => {
+  const sourceFolder = req.query.source;
+  const { text } = req.body;
+
+  if (!isValidSourceFolder(sourceFolder)) {
+    return res.status(400).json({ error: 'Invalid source folder' });
+  }
+  if (!text || !text.trim()) {
+    return res.status(400).json({ error: 'Note text is required' });
+  }
+
+  const resolved = path.resolve(sourceFolder);
+  const notesPath = path.join(resolved, 'notes.md');
+
+  // Ensure directory exists
+  if (!fs.existsSync(resolved)) {
+    fs.mkdirSync(resolved, { recursive: true });
+  }
+
+  const now = new Date();
+  const timestamp = now.toISOString().replace('T', ' ').replace(/\.\d+Z$/, '');
+  const entry = `### [${timestamp}] User\n${text.trim()}\n\n`;
+
+  // Create with header or append
+  if (!fs.existsSync(notesPath)) {
+    fs.writeFileSync(notesPath, `# User Notes\n\n${entry}`, 'utf-8');
+  } else {
+    fs.appendFileSync(notesPath, entry, 'utf-8');
+  }
+
+  const raw = fs.readFileSync(notesPath, 'utf-8');
+  const entries = parseNotes(raw);
+  res.json({ success: true, entries, raw });
+});
+
 app.listen(PORT, () => {
   const configured = config.isConfigured();
   console.log(`\n  Claude Session Tracker`);

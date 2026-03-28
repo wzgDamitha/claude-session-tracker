@@ -527,17 +527,89 @@ function openDetail(s) {
     </div>
     ${pendingHTML}
     ${notesTopHTML}
+    <div class="user-notes" id="user-notes" data-source="${escapeHtml(s.sourceFolder)}">
+      <div class="user-notes-header">
+        <span class="user-notes-title">/ User Notes</span>
+        <span class="user-notes-count" id="notes-count"></span>
+      </div>
+      <div class="user-notes-entries" id="notes-entries">
+        <div class="user-notes-empty">Loading...</div>
+      </div>
+      <div class="user-notes-form">
+        <textarea id="notes-input" placeholder="Add a note for the next session..."></textarea>
+        <button id="notes-submit">Post</button>
+      </div>
+    </div>
     ${timelineHTML}
     <div class="session-content">${s.html}</div>
   `;
   detailScreen.classList.remove('hidden');
   appEl.classList.add('hidden');
   window.scrollTo(0, 0);
+
+  // Load notes
+  loadNotes(s.sourceFolder);
+
+  // Wire up post button
+  const notesSubmit = document.getElementById('notes-submit');
+  const notesInput = document.getElementById('notes-input');
+  notesSubmit.addEventListener('click', () => postNote(s.sourceFolder));
+  notesInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) postNote(s.sourceFolder);
+  });
 }
 
 function closeDetail() {
   detailScreen.classList.add('hidden');
   appEl.classList.remove('hidden');
+}
+
+async function loadNotes(sourceFolder) {
+  const entriesEl = document.getElementById('notes-entries');
+  const countEl = document.getElementById('notes-count');
+  try {
+    const res = await fetch(`/api/notes?source=${encodeURIComponent(sourceFolder)}`);
+    const data = await res.json();
+    if (data.entries.length === 0) {
+      entriesEl.innerHTML = '<div class="user-notes-empty">No notes yet. Add one for the next session to pick up.</div>';
+      countEl.textContent = '';
+    } else {
+      countEl.textContent = `${data.entries.length} note${data.entries.length > 1 ? 's' : ''}`;
+      entriesEl.innerHTML = data.entries.map(e => `
+        <div class="user-note-entry">
+          <div class="user-note-time">${escapeHtml(e.timestamp)}</div>
+          <div class="user-note-body">${escapeHtml(e.body)}</div>
+        </div>
+      `).join('');
+      entriesEl.scrollTop = entriesEl.scrollHeight;
+    }
+  } catch (err) {
+    entriesEl.innerHTML = `<div class="user-notes-empty" style="color:var(--red)">Failed to load notes</div>`;
+  }
+}
+
+async function postNote(sourceFolder) {
+  const input = document.getElementById('notes-input');
+  const btn = document.getElementById('notes-submit');
+  const text = input.value.trim();
+  if (!text) return;
+
+  btn.disabled = true;
+  btn.textContent = 'Posting...';
+  try {
+    await fetch(`/api/notes?source=${encodeURIComponent(sourceFolder)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+    });
+    input.value = '';
+    await loadNotes(sourceFolder);
+  } catch (err) {
+    console.error('Failed to post note:', err);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Post';
+  }
 }
 
 function closeModal(overlay) { overlay.classList.remove('open'); }

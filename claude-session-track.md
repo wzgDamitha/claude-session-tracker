@@ -26,8 +26,10 @@ If the `.claude/sessions/` directory does not exist, **create it**.
 1. **Check if `session-tracker.md` already exists** in the sessions folder
 2. **If it exists** — read it, then update it (see Section 5: Continuing an Existing File)
 3. **If it doesn't exist** — create it fresh (see Section 4: File Format)
+4. **Check if `notes.md` exists** in the same folder — if it does, **read it**. These are notes and instructions left by the user from the dashboard. Incorporate any relevant context into your work.
 
 **NEVER create a new file if one already exists. ALWAYS update the existing file.**
+**NEVER modify `notes.md`** — it is written by the user, not by agents.
 
 ---
 
@@ -354,6 +356,8 @@ Optional details about what was done, found, or decided.
 12. **Create `.claude/sessions/` directory** if it doesn't exist
 13. **Set `tracking_start` once** — never change it after the file is created
 14. **Don't over-read for mid-project summaries** — quick scan only
+15. **Read `notes.md` at session start** if it exists — it contains user instructions and context
+16. **Never modify `notes.md`** — it is user-maintained from the dashboard
 
 ---
 
