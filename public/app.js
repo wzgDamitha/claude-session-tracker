@@ -33,6 +33,7 @@ const filtersContainer = document.getElementById('filters');
 // --- Wizard ---
 let wizardMode = null;
 let wizardFolders = [];
+let discoveredProjects = [];
 
 document.querySelectorAll('.wizard-mode-btn').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -90,6 +91,102 @@ wizardFolderInput.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') wizardAddBtn.click();
 });
 
+// --- Discover ---
+const wizardDiscoverInput = document.getElementById('wizard-discover-input');
+const wizardDiscoverBtn = document.getElementById('wizard-discover-btn');
+const wizardDiscoverResults = document.getElementById('wizard-discover-results');
+const wizardDiscoverList = document.getElementById('wizard-discover-list');
+const wizardSelectAll = document.getElementById('wizard-select-all');
+
+wizardDiscoverBtn.addEventListener('click', async () => {
+  const root = wizardDiscoverInput.value.trim();
+  if (!root) return;
+
+  wizardDiscoverBtn.textContent = 'Scanning...';
+  wizardDiscoverBtn.disabled = true;
+
+  try {
+    const res = await fetch(`/api/discover?root=${encodeURIComponent(root)}`);
+    const data = await res.json();
+
+    if (!res.ok) {
+      showWizardError(data.error || 'Scan failed');
+      return;
+    }
+
+    discoveredProjects = data.projects;
+    renderDiscoverResults();
+    wizardDiscoverResults.classList.remove('hidden');
+  } catch (err) {
+    showWizardError('Connection error: ' + err.message);
+  } finally {
+    wizardDiscoverBtn.textContent = 'Scan';
+    wizardDiscoverBtn.disabled = false;
+  }
+});
+
+wizardDiscoverInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') wizardDiscoverBtn.click();
+});
+
+wizardSelectAll.addEventListener('click', () => {
+  discoveredProjects.forEach(p => {
+    if (p.hasClaude) p._selected = true;
+  });
+  renderDiscoverResults();
+  syncDiscoverToFolders();
+});
+
+function renderDiscoverResults() {
+  wizardDiscoverList.innerHTML = discoveredProjects.map((p, i) => {
+    const badges = [];
+    if (p.hasClaude) badges.push('<span class="discover-badge claude">CLAUDE.md</span>');
+    else badges.push('<span class="discover-badge no-claude">no CLAUDE.md</span>');
+    if (p.sessionCount > 0) badges.push(`<span class="discover-badge sessions">${p.sessionCount} session${p.sessionCount > 1 ? 's' : ''}</span>`);
+
+    return `
+      <li class="discover-item" data-index="${i}">
+        <input type="checkbox" ${p._selected ? 'checked' : ''} data-index="${i}">
+        <div class="discover-item-info">
+          <div class="discover-item-name">${escapeHtml(p.name)}</div>
+          <div class="discover-item-path">${escapeHtml(p.sessionsPath)}</div>
+        </div>
+        <div class="discover-item-badges">${badges.join('')}</div>
+      </li>
+    `;
+  }).join('');
+
+  // Click anywhere on row to toggle
+  wizardDiscoverList.querySelectorAll('.discover-item').forEach(item => {
+    item.addEventListener('click', (e) => {
+      if (e.target.type === 'checkbox') return; // let checkbox handle itself
+      const idx = parseInt(item.dataset.index);
+      discoveredProjects[idx]._selected = !discoveredProjects[idx]._selected;
+      renderDiscoverResults();
+      syncDiscoverToFolders();
+    });
+  });
+
+  wizardDiscoverList.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+    cb.addEventListener('change', () => {
+      const idx = parseInt(cb.dataset.index);
+      discoveredProjects[idx]._selected = cb.checked;
+      syncDiscoverToFolders();
+    });
+  });
+}
+
+function syncDiscoverToFolders() {
+  // Merge discovered selected folders into wizardFolders (avoid duplicates)
+  const selectedPaths = discoveredProjects.filter(p => p._selected).map(p => p.sessionsPath);
+  // Keep manually added folders, add discovered ones
+  const manualFolders = wizardFolders.filter(f =>
+    !discoveredProjects.some(p => p.sessionsPath === f)
+  );
+  wizardFolders = [...manualFolders, ...selectedPaths];
+  renderWizardFolders();
+}
+
 // Save config
 wizardSaveBtn.addEventListener('click', async () => {
   wizardError.classList.add('hidden');
@@ -110,6 +207,7 @@ wizardSaveBtn.addEventListener('click', async () => {
       return;
     }
     body.watchFolders = wizardFolders;
+    body.discoverRoot = wizardDiscoverInput.value.trim();
   }
 
   try {
@@ -387,6 +485,17 @@ function renderSettings() {
         </div>
       ` : ''}
     </div>
+    ${isIndividual ? `
+    <div class="settings-section">
+      <h3>Discover Projects</h3>
+      <div class="settings-folder-add">
+        <input type="text" class="wizard-input" id="settings-discover-input" placeholder="Root folder to scan..." value="${escapeHtml(currentConfig.discoverRoot || '')}">
+        <button class="wizard-add-btn" id="settings-discover-btn">Scan</button>
+      </div>
+      <p class="wizard-hint">Scan a root folder for projects with CLAUDE.md and add them.</p>
+      <div id="settings-discover-results"></div>
+    </div>
+    ` : ''}
     <div class="settings-section">
       <h3>Reset</h3>
       <button class="settings-reset-btn" id="settings-reset-btn">Reset Configuration</button>
@@ -428,6 +537,83 @@ function renderSettings() {
         renderSettings();
       });
     });
+
+    // Discover in settings
+    const discoverBtn = document.getElementById('settings-discover-btn');
+    const discoverInput = document.getElementById('settings-discover-input');
+    const discoverResults = document.getElementById('settings-discover-results');
+
+    if (discoverBtn) {
+      discoverBtn.addEventListener('click', async () => {
+        const root = discoverInput.value.trim();
+        if (!root) return;
+
+        discoverBtn.textContent = 'Scanning...';
+        discoverBtn.disabled = true;
+
+        try {
+          const res = await fetch(`/api/discover?root=${encodeURIComponent(root)}`);
+          const data = await res.json();
+
+          if (!res.ok) {
+            discoverResults.innerHTML = `<p style="color:var(--red);font-size:0.85rem;margin-top:0.5rem">${escapeHtml(data.error)}</p>`;
+            return;
+          }
+
+          // Show discovered projects with add buttons
+          const currentFolders = currentConfig.watchFolders || [];
+          discoverResults.innerHTML = `
+            <ul class="discover-list" style="margin-top:0.75rem">
+              ${data.projects.map(p => {
+                const alreadyAdded = currentFolders.some(f => f === p.sessionsPath || f === p.sessionsPath.replace(/\//g, '\\'));
+                const badges = [];
+                if (p.hasClaude) badges.push('<span class="discover-badge claude">CLAUDE.md</span>');
+                if (p.sessionCount > 0) badges.push('<span class="discover-badge sessions">' + p.sessionCount + ' session' + (p.sessionCount > 1 ? 's' : '') + '</span>');
+                return '<li class="discover-item">' +
+                  '<div class="discover-item-info">' +
+                    '<div class="discover-item-name">' + escapeHtml(p.name) + '</div>' +
+                    '<div class="discover-item-path">' + escapeHtml(p.sessionsPath) + '</div>' +
+                  '</div>' +
+                  '<div class="discover-item-badges">' + badges.join('') + '</div>' +
+                  (alreadyAdded
+                    ? '<span style="color:var(--green);font-size:0.8rem">Added</span>'
+                    : '<button class="wizard-add-btn settings-discover-add" data-path="' + escapeHtml(p.sessionsPath) + '" style="padding:0.25rem 0.75rem;font-size:0.75rem">Add</button>'
+                  ) +
+                '</li>';
+              }).join('')}
+            </ul>
+          `;
+
+          // Add button handlers
+          discoverResults.querySelectorAll('.settings-discover-add').forEach(btn => {
+            btn.addEventListener('click', async () => {
+              await fetch('/api/config/folders', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ path: btn.dataset.path }),
+              });
+              // Save discover root
+              await fetch('/api/config', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ...currentConfig, discoverRoot: root }),
+              });
+              await refreshConfig();
+              renderSettings();
+            });
+          });
+        } catch (err) {
+          discoverResults.innerHTML = `<p style="color:var(--red);font-size:0.85rem;margin-top:0.5rem">${escapeHtml(err.message)}</p>`;
+        } finally {
+          discoverBtn.textContent = 'Scan';
+          discoverBtn.disabled = false;
+        }
+      });
+
+      discoverInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') discoverBtn.click();
+      });
+    }
   }
 
   // Reset

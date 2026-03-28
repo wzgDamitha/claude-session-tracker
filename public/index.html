@@ -42,13 +42,29 @@
 
         <!-- Individual mode input -->
         <div id="wizard-individual" class="hidden">
+          <label class="wizard-label">Auto-discover projects:</label>
+          <div class="wizard-folder-add">
+            <input type="text" id="wizard-discover-input" class="wizard-input" placeholder="e.g. F:\Future (root folder containing your projects)">
+            <button class="wizard-add-btn" id="wizard-discover-btn">Scan</button>
+          </div>
+          <p class="wizard-hint">Enter a root folder that contains your project directories. We'll find ones with CLAUDE.md.</p>
+
+          <div id="wizard-discover-results" class="hidden">
+            <div class="discover-header">
+              <label class="wizard-label" style="margin-bottom:0">Select projects to track:</label>
+              <button class="discover-select-all" id="wizard-select-all">Select all with CLAUDE.md</button>
+            </div>
+            <ul class="discover-list" id="wizard-discover-list"></ul>
+          </div>
+
+          <div class="wizard-divider"><span>or add manually</span></div>
+
           <label class="wizard-label">Add session folder paths:</label>
           <div class="wizard-folder-add">
             <input type="text" id="wizard-folder-input" class="wizard-input" placeholder="e.g. C:\Projects\my-app\.claude\sessions">
             <button class="wizard-add-btn" id="wizard-add-btn">Add</button>
           </div>
           <ul class="wizard-folder-list" id="wizard-folder-list"></ul>
-          <p class="wizard-hint">Add one or more folders. Each project's .claude/sessions directory is a common choice.</p>
         </div>
 
         <button class="wizard-save-btn" id="wizard-save-btn">Save &amp; Start</button>

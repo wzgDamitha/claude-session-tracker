@@ -32,12 +32,15 @@ The user will tell you which update mode to use. If they don't specify, default 
 
 ## 3. Filename
 
+**IMPORTANT: The filename MUST start with `session-` or `session_`.** The tracker app only reads files matching this pattern.
+
 ```
-<session-id>.md
+session-<identifier>.md
 ```
 
-- Use your session ID from the conversation URL (e.g., `session_015WXoyPeSg5LLXjwMqzqnYM.md`)
-- If unknown, use: `session-<short-task-description>.md`
+Examples:
+- `session_015WXoyPeSg5LLXjwMqzqnYM.md` (using your session ID from the URL)
+- `session-fix-login-bug.md` (descriptive name if session ID is unknown)
 
 **Never create duplicate files. Always update the same file.**
 

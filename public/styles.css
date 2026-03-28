@@ -178,6 +178,129 @@ body {
   padding: 0 0.25rem;
 }
 
+/* Discover */
+.wizard-divider {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  margin: 1.25rem 0;
+  position: relative;
+}
+
+.wizard-divider::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  border-top: 1px solid var(--border);
+}
+
+.wizard-divider span {
+  background: var(--surface);
+  padding: 0 0.75rem;
+  position: relative;
+}
+
+.discover-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+  margin-top: 1rem;
+}
+
+.discover-select-all {
+  background: none;
+  border: none;
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 0.8rem;
+  padding: 0;
+}
+
+.discover-select-all:hover { text-decoration: underline; }
+
+.discover-list {
+  list-style: none;
+  max-height: 280px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  margin-bottom: 0.5rem;
+}
+
+.discover-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.discover-item:last-child { border-bottom: none; }
+.discover-item:hover { background: var(--surface-hover); }
+
+.discover-item input[type="checkbox"] {
+  accent-color: var(--accent);
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.discover-item-info { flex: 1; min-width: 0; }
+
+.discover-item-name {
+  font-weight: 600;
+  font-size: 0.88rem;
+}
+
+.discover-item-path {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-family: monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.discover-item-badges {
+  display: flex;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+
+.discover-badge {
+  font-size: 0.65rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 8px;
+  white-space: nowrap;
+}
+
+.discover-badge.claude {
+  background: rgba(63,185,80,0.15);
+  color: var(--green);
+}
+
+.discover-badge.sessions {
+  background: rgba(88,166,255,0.12);
+  color: var(--accent);
+}
+
+.discover-badge.no-claude {
+  background: rgba(139,148,158,0.1);
+  color: var(--text-muted);
+}
+
+.discover-scanning {
+  text-align: center;
+  padding: 1.5rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
 .wizard-save-btn {
   width: 100%;
   background: var(--accent);

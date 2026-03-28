@@ -79,11 +79,11 @@ app.get('/api/config', (req, res) => {
 });
 
 app.post('/api/config', (req, res) => {
-  const { mode, sharedFolder, watchFolders, port } = req.body;
+  const { mode, sharedFolder, watchFolders, discoverRoot, port } = req.body;
 
   // Allow reset (mode: null)
   if (mode === null) {
-    const saved = config.saveConfig({ mode: null, sharedFolder: '', watchFolders: [], port: port || 3890 });
+    const saved = config.saveConfig({ mode: null, sharedFolder: '', watchFolders: [], discoverRoot: '', port: port || 3890 });
     buildWatcher();
     return res.json({ success: true, config: saved });
   }
@@ -131,6 +131,7 @@ app.post('/api/config', (req, res) => {
     mode,
     sharedFolder: mode === 'shared' ? sharedFolder : '',
     watchFolders: mode === 'individual' ? watchFolders : [],
+    discoverRoot: discoverRoot || '',
     port: port || 3890,
   });
 
@@ -189,6 +190,70 @@ app.delete('/api/config/folders', (req, res) => {
 
   res.json({ success: true, watchFolders: cfg.watchFolders });
 });
+
+// --- Project discovery ---
+app.get('/api/discover', (req, res) => {
+  const root = req.query.root;
+  if (!root) {
+    return res.status(400).json({ error: 'root query parameter is required' });
+  }
+
+  const resolved = path.resolve(root);
+  if (!fs.existsSync(resolved)) {
+    return res.status(400).json({ error: `Folder not found: ${resolved}` });
+  }
+
+  let entries;
+  try {
+    entries = fs.readdirSync(resolved, { withFileTypes: true });
+  } catch (err) {
+    return res.status(400).json({ error: `Cannot read folder: ${err.message}` });
+  }
+
+  const projects = [];
+
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue;
+
+    const projectDir = path.join(resolved, entry.name);
+    const hasClaude = fs.existsSync(path.join(projectDir, 'CLAUDE.md'))
+      || fs.existsSync(path.join(projectDir, 'claude.md'));
+    const sessionsDir = path.join(projectDir, '.claude', 'sessions');
+    const hasSessionsDir = fs.existsSync(sessionsDir);
+
+    // Count existing session files
+    let sessionCount = 0;
+    if (hasSessionsDir) {
+      try {
+        sessionCount = fs.readdirSync(sessionsDir)
+          .filter(f => isSessionFile(f)).length;
+      } catch {}
+    }
+
+    projects.push({
+      name: entry.name,
+      path: projectDir,
+      sessionsPath: sessionsDir,
+      hasClaude,
+      hasSessionsDir,
+      sessionCount,
+    });
+  }
+
+  // Sort: projects with CLAUDE.md first, then by name
+  projects.sort((a, b) => {
+    if (a.hasClaude !== b.hasClaude) return a.hasClaude ? -1 : 1;
+    return a.name.localeCompare(b.name);
+  });
+
+  res.json({ root: resolved, projects });
+});
+
+// --- Session file naming ---
+// Only files matching session-* or session_* are treated as session reports
+function isSessionFile(filename) {
+  return /^session[-_].+\.md$/i.test(filename);
+}
 
 // --- Session parsing ---
 function parseActivityLog(content) {
@@ -264,7 +329,7 @@ app.get('/api/sessions', (req, res) => {
   for (const dir of watchPaths) {
     if (!fs.existsSync(dir)) continue;
 
-    const files = fs.readdirSync(dir).filter(f => f.endsWith('.md'));
+    const files = fs.readdirSync(dir).filter(f => isSessionFile(f));
     for (const f of files) {
       try {
         sessions.push(parseSessionFile(path.join(dir, f), dir));

@@ -7,6 +7,7 @@ const DEFAULT_CONFIG = {
   mode: null,
   sharedFolder: '',
   watchFolders: [],
+  discoverRoot: '',
   port: 3890,
 };
 
