@@ -723,6 +723,7 @@ function openDetail(s) {
             <div class="progress-remaining">${s.tasks.total - s.tasks.done} remaining</div>
           </div>
         </div>
+        <div class="sidebar-separator"></div>
         ${sessionHistoryHTML}
       </div>
     </div>

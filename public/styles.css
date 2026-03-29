@@ -1639,6 +1639,11 @@ main {
 /* Session history */
 .session-history { margin-bottom: 20px; }
 
+.sidebar-separator {
+  border-top: 1px solid var(--border);
+  margin: 16px 0;
+}
+
 .session-history h3 {
   font-family: var(--font-mono);
   font-size: 10px;
@@ -1646,6 +1651,7 @@ main {
   margin-bottom: 8px;
   text-transform: uppercase;
   letter-spacing: 0.1em;
+  text-align: center;
 }
 
 .session-history-list { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -1656,6 +1662,8 @@ main {
   padding: 3px 10px;
   border: 1px solid var(--border);
   color: var(--text-tertiary);
+  width: 100%;
+  text-align: center;
 }
 
 .session-history-chip.current {
