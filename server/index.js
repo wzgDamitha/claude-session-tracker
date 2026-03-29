@@ -197,6 +197,59 @@ app.delete('/api/config/folders', (req, res) => {
 });
 
 // --- Project discovery ---
+function discoverProjects(dir, rootDir, maxDepth, depth) {
+  if (depth > maxDepth) return [];
+  const projects = [];
+
+  let entries;
+  try {
+    entries = fs.readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return projects;
+  }
+
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue;
+    if (entry.name === 'node_modules' || entry.name === '.git' || entry.name === 'dist' || entry.name === 'build') continue;
+
+    const fullPath = path.join(dir, entry.name);
+
+    // Check if this directory has .claude/sessions
+    const sessionsDir = path.join(fullPath, '.claude', 'sessions');
+    const hasSessionsDir = fs.existsSync(sessionsDir);
+    const hasClaude = fs.existsSync(path.join(fullPath, 'CLAUDE.md'))
+      || fs.existsSync(path.join(fullPath, 'claude.md'));
+
+    if (hasClaude || hasSessionsDir) {
+      let sessionCount = 0;
+      if (hasSessionsDir) {
+        try {
+          sessionCount = fs.readdirSync(sessionsDir)
+            .filter(f => isSessionFile(f)).length;
+        } catch {}
+      }
+
+      // Use relative path from root for the name
+      const relativePath = path.relative(rootDir, fullPath);
+      projects.push({
+        name: relativePath.includes(path.sep) ? relativePath : entry.name,
+        path: fullPath,
+        sessionsPath: sessionsDir,
+        hasClaude,
+        hasSessionsDir,
+        sessionCount,
+      });
+    }
+
+    // Recurse into subdirectories to find nested projects
+    if (depth < maxDepth) {
+      projects.push(...discoverProjects(fullPath, rootDir, maxDepth, depth + 1));
+    }
+  }
+
+  return projects;
+}
+
 app.get('/api/discover', (req, res) => {
   const root = req.query.root;
   if (!root) {
@@ -208,42 +261,8 @@ app.get('/api/discover', (req, res) => {
     return res.status(400).json({ error: `Folder not found: ${resolved}` });
   }
 
-  let entries;
-  try {
-    entries = fs.readdirSync(resolved, { withFileTypes: true });
-  } catch (err) {
-    return res.status(400).json({ error: `Cannot read folder: ${err.message}` });
-  }
-
-  const projects = [];
-
-  for (const entry of entries) {
-    if (!entry.isDirectory()) continue;
-
-    const projectDir = path.join(resolved, entry.name);
-    const hasClaude = fs.existsSync(path.join(projectDir, 'CLAUDE.md'))
-      || fs.existsSync(path.join(projectDir, 'claude.md'));
-    const sessionsDir = path.join(projectDir, '.claude', 'sessions');
-    const hasSessionsDir = fs.existsSync(sessionsDir);
-
-    // Count existing session files
-    let sessionCount = 0;
-    if (hasSessionsDir) {
-      try {
-        sessionCount = fs.readdirSync(sessionsDir)
-          .filter(f => isSessionFile(f)).length;
-      } catch {}
-    }
-
-    projects.push({
-      name: entry.name,
-      path: projectDir,
-      sessionsPath: sessionsDir,
-      hasClaude,
-      hasSessionsDir,
-      sessionCount,
-    });
-  }
+  const maxDepth = parseInt(req.query.depth, 10) || 3;
+  const projects = discoverProjects(resolved, resolved, maxDepth, 0);
 
   // Sort: projects with CLAUDE.md first, then by name
   projects.sort((a, b) => {
