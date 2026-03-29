@@ -42,6 +42,10 @@ const detailBody = document.getElementById('detail-body');
 const detailBack = document.getElementById('detail-back');
 const viewToggle = document.getElementById('view-toggle');
 const filtersContainer = document.getElementById('filters');
+const floatingSettingsBtn = document.getElementById('floating-settings-btn');
+const floatingSettingsPanel = document.getElementById('floating-settings-panel');
+const floatingSettingsClose = document.getElementById('floating-settings-close');
+const floatingSettingsContent = document.getElementById('floating-settings-content');
 
 // --- Wizard ---
 let wizardMode = null;
@@ -739,6 +743,76 @@ settingsBtn.addEventListener('click', () => { renderSettings(); settingsOverlay.
 settingsClose.addEventListener('click', () => closeModal(settingsOverlay));
 settingsOverlay.addEventListener('click', (e) => { if (e.target === settingsOverlay) closeModal(settingsOverlay); });
 
+function parseCSSValue(str) {
+  const match = (str || '').match(/^([\d.]+)\s*(px|%|rem|em|vw)?$/);
+  if (match) return { value: match[1], unit: match[2] || 'px' };
+  return { value: str || '', unit: '' };
+}
+
+function renderFloatingSettings() {
+  if (!currentConfig) return;
+  const mw = parseCSSValue(currentConfig.maxWidth || '100%');
+  if (!mw.unit) mw.unit = '%';
+  const rg = parseCSSValue(currentConfig.rowGap || '0px');
+  if (!rg.unit) rg.unit = 'px';
+  const cg = parseCSSValue(currentConfig.columnGap || '0px');
+  if (!cg.unit) cg.unit = 'px';
+  const fontScale = currentConfig.fontScale || '100';
+
+  const unitOptions = (selected) => ['%', 'px', 'rem', 'em', 'vw'].map(u =>
+    `<option value="${u}"${u === selected ? ' selected' : ''}>${u}</option>`
+  ).join('');
+
+  floatingSettingsContent.innerHTML = `
+    <div class="floating-field">
+      <label>Max Width</label>
+      <div class="floating-input-group">
+        <input type="number" id="float-max-width-val" value="${escapeHtml(mw.value)}" min="0">
+        <select id="float-max-width-unit">${unitOptions(mw.unit)}</select>
+      </div>
+    </div>
+    <div class="floating-field">
+      <label>Row Gap</label>
+      <div class="floating-input-group">
+        <input type="number" id="float-row-gap-val" value="${escapeHtml(rg.value)}" min="0">
+        <select id="float-row-gap-unit">${unitOptions(rg.unit)}</select>
+      </div>
+    </div>
+    <div class="floating-field">
+      <label>Column Gap</label>
+      <div class="floating-input-group">
+        <input type="number" id="float-col-gap-val" value="${escapeHtml(cg.value)}" min="0">
+        <select id="float-col-gap-unit">${unitOptions(cg.unit)}</select>
+      </div>
+    </div>
+    <div class="floating-field">
+      <label>Font Scale — <span id="float-font-scale-value">${escapeHtml(fontScale)}%</span></label>
+      <input type="range" id="float-font-scale" min="70" max="150" step="5" value="${escapeHtml(fontScale)}" style="width:100%;accent-color:var(--accent)">
+    </div>
+    <button class="floating-apply-btn" id="float-apply-btn">Apply</button>
+  `;
+
+  const floatFontSlider = document.getElementById('float-font-scale');
+  const floatFontValue = document.getElementById('float-font-scale-value');
+  floatFontSlider.addEventListener('input', () => {
+    floatFontValue.textContent = floatFontSlider.value + '%';
+  });
+
+  document.getElementById('float-apply-btn').addEventListener('click', async () => {
+    const maxWidth = document.getElementById('float-max-width-val').value + document.getElementById('float-max-width-unit').value;
+    const rowGap = document.getElementById('float-row-gap-val').value + document.getElementById('float-row-gap-unit').value;
+    const columnGap = document.getElementById('float-col-gap-val').value + document.getElementById('float-col-gap-unit').value;
+    const fs = floatFontSlider.value || '100';
+    await fetch('/api/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...currentConfig, maxWidth, rowGap, columnGap, fontScale: fs }),
+    });
+    applyDisplaySettings({ maxWidth, rowGap, columnGap, fontScale: fs });
+    await refreshConfig();
+  });
+}
+
 function renderSettings() {
   if (!currentConfig) return;
   const mode = currentConfig.mode || 'not configured';
@@ -776,26 +850,29 @@ function renderSettings() {
     <div class="settings-section">
       <h3>Display</h3>
       <label class="form-label" style="font-family:var(--font-mono);font-size:10px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;display:block">Max Width</label>
-      <div class="settings-folder-add">
-        <input type="text" class="wizard-input" id="settings-max-width" value="${escapeHtml(currentConfig.maxWidth || '100%')}" placeholder="e.g. 100%, 1400px">
+      <div class="floating-input-group" style="margin-bottom:4px">
+        <input type="number" id="settings-max-width-val" value="${escapeHtml(parseCSSValue(currentConfig.maxWidth || '100%').value)}" min="0">
+        <select id="settings-max-width-unit">${['%','px','rem','em','vw'].map(u => '<option value="' + u + '"' + (parseCSSValue(currentConfig.maxWidth || '100%').unit === u || (!parseCSSValue(currentConfig.maxWidth || '100%').unit && u === '%') ? ' selected' : '') + '>' + u + '</option>').join('')}</select>
       </div>
       <p class="wizard-hint">Dashboard max width. Use 100% for full width or a px value like 1400px.</p>
 
       <label class="form-label" style="font-family:var(--font-mono);font-size:10px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;margin-top:16px;display:block">Row Gap</label>
-      <div class="settings-folder-add">
-        <input type="text" class="wizard-input" id="settings-row-gap" value="${escapeHtml(currentConfig.rowGap || '0px')}" placeholder="e.g. 0px, 8px, 16px">
+      <div class="floating-input-group" style="margin-bottom:4px">
+        <input type="number" id="settings-row-gap-val" value="${escapeHtml(parseCSSValue(currentConfig.rowGap || '0px').value)}" min="0">
+        <select id="settings-row-gap-unit">${['%','px','rem','em','vw'].map(u => '<option value="' + u + '"' + (parseCSSValue(currentConfig.rowGap || '0px').unit === u || (!parseCSSValue(currentConfig.rowGap || '0px').unit && u === 'px') ? ' selected' : '') + '>' + u + '</option>').join('')}</select>
       </div>
 
       <label class="form-label" style="font-family:var(--font-mono);font-size:10px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;margin-top:16px;display:block">Column Gap</label>
-      <div class="settings-folder-add">
-        <input type="text" class="wizard-input" id="settings-column-gap" value="${escapeHtml(currentConfig.columnGap || '0px')}" placeholder="e.g. 0px, 8px, 16px">
+      <div class="floating-input-group" style="margin-bottom:4px">
+        <input type="number" id="settings-column-gap-val" value="${escapeHtml(parseCSSValue(currentConfig.columnGap || '0px').value)}" min="0">
+        <select id="settings-column-gap-unit">${['%','px','rem','em','vw'].map(u => '<option value="' + u + '"' + (parseCSSValue(currentConfig.columnGap || '0px').unit === u || (!parseCSSValue(currentConfig.columnGap || '0px').unit && u === 'px') ? ' selected' : '') + '>' + u + '</option>').join('')}</select>
       </div>
 
       <label class="form-label" style="font-family:var(--font-mono);font-size:10px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;margin-top:16px;display:block">Font Scale — <span id="font-scale-value">${escapeHtml(currentConfig.fontScale || '100')}%</span></label>
       <div style="display:flex;align-items:center;gap:12px">
         <input type="range" id="settings-font-scale" min="70" max="150" step="5" value="${escapeHtml(currentConfig.fontScale || '100')}" style="flex:1;accent-color:var(--accent)">
       </div>
-      <p class="wizard-hint">Scale all text sizes (70%–150%).</p>
+      <p class="wizard-hint">Scale all text sizes (70%&ndash;150%).</p>
 
       <button class="wizard-add-btn" id="settings-save-display" style="margin-top:16px">Apply</button>
     </div>
@@ -877,9 +954,9 @@ function renderSettings() {
   });
 
   document.getElementById('settings-save-display').addEventListener('click', async () => {
-    const maxWidth = document.getElementById('settings-max-width').value.trim() || '100%';
-    const rowGap = document.getElementById('settings-row-gap').value.trim() || '0px';
-    const columnGap = document.getElementById('settings-column-gap').value.trim() || '0px';
+    const maxWidth = (document.getElementById('settings-max-width-val').value || '100') + (document.getElementById('settings-max-width-unit').value || '%');
+    const rowGap = (document.getElementById('settings-row-gap-val').value || '0') + (document.getElementById('settings-row-gap-unit').value || 'px');
+    const columnGap = (document.getElementById('settings-column-gap-val').value || '0') + (document.getElementById('settings-column-gap-unit').value || 'px');
     const fontScale = fontScaleSlider.value || '100';
     await fetch('/api/config', {
       method: 'POST',
@@ -923,7 +1000,24 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     if (!detailScreen.classList.contains('hidden')) closeDetail();
     closeModal(settingsOverlay);
+    if (!floatingSettingsPanel.classList.contains('hidden')) {
+      floatingSettingsPanel.classList.add('hidden');
+    }
   }
+});
+
+floatingSettingsBtn.addEventListener('click', () => {
+  const isHidden = floatingSettingsPanel.classList.contains('hidden');
+  if (isHidden) {
+    renderFloatingSettings();
+    floatingSettingsPanel.classList.remove('hidden');
+  } else {
+    floatingSettingsPanel.classList.add('hidden');
+  }
+});
+
+floatingSettingsClose.addEventListener('click', () => {
+  floatingSettingsPanel.classList.add('hidden');
 });
 
 filtersContainer.addEventListener('click', (e) => {
