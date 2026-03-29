@@ -101,6 +101,31 @@ Both are displayed together in chronological order with **[user]** and **[agent]
 | **List** | Compact table with priority, status, tasks, timestamps |
 | **Timeline** | Horizontal bars showing project time spans, color-coded by status |
 
+### Card Tags & Badges
+
+Each card displays contextual tags to give you a quick overview at a glance:
+
+| Tag | Example | Meaning |
+|-----|---------|---------|
+| **Status** | `in progress`, `completed`, `blocked`, `failed` | Current state of the session. Color-coded: cyan for active/done, yellow for blocked, red for failed. |
+| **Priority** | `!!!`, `!!`, `!`, `~` | Urgency level — critical (red), high (yellow), medium (cyan), low (gray). Set from the detail view. |
+| **Source** | `my-app` | Which project folder the session belongs to. Purple badge. |
+| **Tracking** | `full`, `mid-project` | How tracking started — `full` (green) means from project inception, `mid-project` (yellow) means added to an existing project. |
+| **Update Mode** | `auto`, `manual`, `budget` | How often the agent updates the tracking file. See [Update Modes](#update-modes--token-usage). |
+| **Session Count** | `3 sess` | Number of Claude sessions that have contributed to this project. |
+| **Branch** | `● feature/auth` | Current git branch the session is working on. |
+| **Updated** | `2 hours ago` | Time since the tracking file was last modified. |
+| **Tags** | `backend`, `auth` | Custom keywords set by the agent for categorization. Used in search. |
+
+In the **detail view**, you'll also see:
+
+| Tag | Meaning |
+|-----|---------|
+| **Session history chips** | List of all session IDs that contributed. The current/latest session is highlighted in cyan. |
+| **[user] / [agent] note badges** | Who wrote each note — cyan for user, purple for agent. |
+| **Repository** | The `owner/repo` identifier. |
+| **Agent model** | Which Claude model is running the session (e.g. `claude-opus-4-6`). |
+
 ### Search & Filter
 
 - **Search bar** — instantly filter by project title, tags, branch, or repository
