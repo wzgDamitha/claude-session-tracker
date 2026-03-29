@@ -605,11 +605,28 @@ function openDetail(s) {
 
   let timelineHTML = '';
   if (s.activityLog && s.activityLog.length > 0) {
+    const maxVisible = 8;
+    const entries = s.activityLog;
+    const hasMore = entries.length > maxVisible;
+    const visibleEntries = hasMore ? entries.slice(-maxVisible) : entries;
+    const hiddenEntries = hasMore ? entries.slice(0, entries.length - maxVisible) : [];
     timelineHTML = `
       <h2 style="color:var(--accent);margin-top:1.5rem;margin-bottom:0.75rem;">Activity Timeline</h2>
       ${isMidProject ? '<div class="timeline-partial-notice">// activity from tracking start point only</div>' : ''}
       <div class="activity-timeline">
-        ${s.activityLog.map(entry => {
+        ${hasMore ? `
+          <div class="activity-hidden" id="activity-hidden" style="display:none">
+            ${hiddenEntries.map(entry => {
+              const isBoundary = entry.type === 'session_start' || entry.type === 'session_end';
+              return `
+                <div class="activity-entry ${isBoundary ? 'activity-boundary' : ''}">
+                  <div class="activity-time">${escapeHtml(entry.timestamp)}</div>
+                  <div class="activity-title">${escapeHtml(entry.title)}</div>
+                  ${entry.body ? `<div class="activity-body">${escapeHtml(entry.body)}</div>` : ''}
+                </div>`;
+            }).join('')}
+          </div>` : ''}
+        ${visibleEntries.map(entry => {
           const isBoundary = entry.type === 'session_start' || entry.type === 'session_end';
           return `
             <div class="activity-entry ${isBoundary ? 'activity-boundary' : ''}">
@@ -618,7 +635,8 @@ function openDetail(s) {
               ${entry.body ? `<div class="activity-body">${escapeHtml(entry.body)}</div>` : ''}
             </div>`;
         }).join('')}
-      </div>`;
+      </div>
+      ${hasMore ? `<button class="activity-toggle-btn" id="activity-toggle-btn">Show all ${entries.length} entries</button>` : ''}`;
   }
 
   // Pending tasks for modal top
@@ -630,7 +648,7 @@ function openDetail(s) {
   let pendingHTML = '';
   if (pendingTasks.length > 0) {
     pendingHTML = `
-      <div class="card-next-up" style="margin-bottom:1rem">
+      <div class="card-next-up detail-pending">
         <div class="card-next-up-title">// remaining tasks (${pendingTasks.length})</div>
         ${pendingTasks.map(t => `<div class="task-item"><span class="task-pending">&#9679;</span> <span>${escapeHtml(t)}</span></div>`).join('')}
       </div>`;
@@ -639,59 +657,73 @@ function openDetail(s) {
   let notesTopHTML = '';
   if (notesSection.trim() && !notesSection.trim().startsWith('_None')) {
     notesTopHTML = `
-      <div class="card-notes" style="margin-bottom:1rem;border-top:none;border:1px solid var(--border);border-radius:var(--radius);padding:0.75rem 1rem">
-        <div style="font-family:var(--font-mono);font-size:10px;color:var(--purple);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px;font-weight:700;font-style:normal">// handoff notes</div>
-        <div style="font-style:normal;color:var(--text-secondary);font-size:13px;line-height:1.6">${escapeHtml(notesSection.trim())}</div>
+      <div class="detail-handoff">
+        <div class="detail-handoff-label">// handoff notes</div>
+        <div class="detail-handoff-body">${escapeHtml(notesSection.trim())}</div>
       </div>`;
   }
 
   detailBody.innerHTML = `
     <h2>${escapeHtml(s.title || s.file)}</h2>
-    <div class="modal-meta">
-      <span class="status-badge status-${status}">${status.replace('_', ' ')}</span>
-      ${s.repository ? `<span>${escapeHtml(s.repository)}</span>` : ''}
-      ${s.agent_model ? `<span>${escapeHtml(s.agent_model)}</span>` : ''}
-      ${s.update_mode ? `<span class="update-mode-tag">${escapeHtml(s.update_mode)}</span>` : ''}
-      ${s.tracking_start === 'mid_project' ? '<span class="tracking-badge tracking-mid">mid-project</span>' : ''}
-      ${s.tracking_start === 'full' ? '<span class="tracking-badge tracking-full">full</span>' : ''}
-      ${s.sessionCount ? `<span class="session-count-tag">${s.sessionCount} session${s.sessionCount > 1 ? 's' : ''}</span>` : ''}
-      <select class="priority-select" id="priority-select" data-file="${escapeHtml(s.file)}" data-source="${escapeHtml(s.sourceFolder)}">
-        ${['none','low','medium','high','critical'].map(p => `<option value="${p}" ${(s.priority||'none')===p?'selected':''}>${p}</option>`).join('')}
-      </select>
-      ${s.sourceName ? `<span class="source-tag">${escapeHtml(s.sourceName)}</span>` : ''}
-      ${s.version_control === 'git_remote' ? `<span class="vc-badge vc-remote">${VC_CLOUD_ICON}remote</span>`
-        : s.version_control === 'git_local' ? `<span class="vc-badge vc-local">${VC_GIT_ICON}local</span>`
-        : s.version_control === 'none' ? `<span class="vc-badge vc-none">${VC_FOLDER_ICON}no git</span>` : ''}
-      ${s.current_session ? `<span>current: ${escapeHtml(s.current_session)}</span>` : ''}
-      ${s.current_branch || s.branch ? `<span>&#9702; ${escapeHtml(s.current_branch || s.branch)}</span>` : ''}
-      ${s.created_at ? `<span>since ${new Date(s.created_at).toLocaleDateString()}</span>` : ''}
-      ${s.updated_at ? `<span>updated ${new Date(s.updated_at).toLocaleString()}</span>` : ''}
-    </div>
-    <div class="tech-stack-section" id="tech-stack-section" style="display:none">
-      <div class="tech-stack-header" id="tech-stack-toggle">
-        <span class="user-notes-title">// Tech Stack</span>
-        <span class="tech-stack-chevron" id="tech-stack-chevron">&#9654;</span>
+    <div class="detail-meta">
+      <div class="detail-meta-row detail-meta-primary">
+        <span class="status-badge status-${status}">${status.replace('_', ' ')}</span>
+        <select class="priority-select" id="priority-select" data-file="${escapeHtml(s.file)}" data-source="${escapeHtml(s.sourceFolder)}">
+          ${['none','low','medium','high','critical'].map(p => `<option value="${p}" ${(s.priority||'none')===p?'selected':''}>${p}</option>`).join('')}
+        </select>
+        <span>${progress}%</span>
+        <span>${s.tasks.done}/${s.tasks.total} tasks</span>
       </div>
-      <div class="tech-stack-content" id="tech-stack-content"></div>
-    </div>
-    ${midProjectNotice}
-    ${sessionHistoryHTML}
-    <div class="modal-progress">
-      <div class="progress-ring">
-        <svg width="80" height="80">
-          <circle class="progress-ring-bg" cx="40" cy="40" r="34"/>
-          <circle class="progress-ring-fill" cx="40" cy="40" r="34"
-            style="stroke:var(${colorVar});stroke-dasharray:${circumference};stroke-dashoffset:${offset}"/>
-        </svg>
-        <div class="progress-ring-text">${progress}%</div>
+      <div class="detail-meta-row detail-meta-context">
+        ${s.repository ? `<span>${escapeHtml(s.repository)}</span>` : ''}
+        ${s.current_branch || s.branch ? `<span>&#9702; ${escapeHtml(s.current_branch || s.branch)}</span>` : ''}
+        ${s.version_control === 'git_remote' ? `<span class="vc-badge vc-remote">${VC_CLOUD_ICON}remote</span>`
+          : s.version_control === 'git_local' ? `<span class="vc-badge vc-local">${VC_GIT_ICON}local</span>`
+          : s.version_control === 'none' ? `<span class="vc-badge vc-none">${VC_FOLDER_ICON}no git</span>` : ''}
+        ${s.agent_model ? `<span>${escapeHtml(s.agent_model)}</span>` : ''}
+        ${s.update_mode ? `<span class="update-mode-tag">${escapeHtml(s.update_mode)}</span>` : ''}
+        ${s.sourceName ? `<span class="source-tag">${escapeHtml(s.sourceName)}</span>` : ''}
       </div>
-      <div>
-        <div style="font-weight:700;color:var(--text-primary)">${s.tasks.done} of ${s.tasks.total} tasks complete</div>
-        <div style="font-size:13px;color:var(--text-tertiary);font-family:var(--font-mono)">${s.tasks.total - s.tasks.done} remaining</div>
+      <div class="detail-meta-row detail-meta-temporal">
+        ${s.created_at ? `<span>since ${new Date(s.created_at).toLocaleDateString()}</span>` : ''}
+        ${s.updated_at ? `<span>updated ${new Date(s.updated_at).toLocaleString()}</span>` : ''}
+        ${s.sessionCount ? `<span class="session-count-tag">${s.sessionCount} session${s.sessionCount > 1 ? 's' : ''}</span>` : ''}
+        ${s.tracking_start === 'mid_project' ? '<span class="tracking-badge tracking-mid">mid-project</span>' : ''}
+        ${s.tracking_start === 'full' ? '<span class="tracking-badge tracking-full">full</span>' : ''}
+        ${s.current_session ? `<span>current: ${escapeHtml(s.current_session)}</span>` : ''}
       </div>
     </div>
-    ${pendingHTML}
-    ${notesTopHTML}
+    <div class="detail-top-grid">
+      <div class="detail-main-col">
+        <div class="tech-stack-section" id="tech-stack-section" style="display:none">
+          <div class="tech-stack-header" id="tech-stack-toggle">
+            <span class="user-notes-title">// Tech Stack</span>
+            <span class="tech-stack-chevron" id="tech-stack-chevron">&#9654;</span>
+          </div>
+          <div class="tech-stack-content" id="tech-stack-content"></div>
+        </div>
+        ${midProjectNotice}
+        ${pendingHTML}
+        ${notesTopHTML}
+      </div>
+      <div class="detail-sidebar">
+        <div class="modal-progress">
+          <div class="progress-ring">
+            <svg width="80" height="80">
+              <circle class="progress-ring-bg" cx="40" cy="40" r="34"/>
+              <circle class="progress-ring-fill" cx="40" cy="40" r="34"
+                style="stroke:var(${colorVar});stroke-dasharray:${circumference};stroke-dashoffset:${offset}"/>
+            </svg>
+            <div class="progress-ring-text">${progress}%</div>
+          </div>
+          <div>
+            <div class="progress-stats">${s.tasks.done} of ${s.tasks.total} tasks</div>
+            <div class="progress-remaining">${s.tasks.total - s.tasks.done} remaining</div>
+          </div>
+        </div>
+        ${sessionHistoryHTML}
+      </div>
+    </div>
     <div class="user-notes" id="user-notes" data-source="${escapeHtml(s.sourceFolder)}">
       <div class="user-notes-header">
         <span class="user-notes-title">// Notes</span>
@@ -711,7 +743,7 @@ function openDetail(s) {
       </div>
     </div>
     ${timelineHTML}
-    <div class="session-content">${s.html}</div>
+    ${renderDetailSections(s)}
   `;
   detailScreen.classList.remove('hidden');
   appEl.classList.add('hidden');
@@ -726,6 +758,21 @@ function openDetail(s) {
     });
     await fetchSessions();
   });
+
+  // Activity timeline toggle
+  const activityToggleBtn = document.getElementById('activity-toggle-btn');
+  if (activityToggleBtn) {
+    activityToggleBtn.addEventListener('click', () => {
+      const hidden = document.getElementById('activity-hidden');
+      if (hidden) {
+        const isShown = hidden.style.display !== 'none';
+        hidden.style.display = isShown ? 'none' : '';
+        activityToggleBtn.textContent = isShown
+          ? `Show all ${s.activityLog.length} entries`
+          : 'Show recent only';
+      }
+    });
+  }
 
   // Load tech stack
   loadTechStack(s.sourceFolder);
@@ -744,11 +791,28 @@ function openDetail(s) {
 
 function simpleMarkdown(text) {
   return text
-    .replace(/^### (.+)$/gm, '<h4 style="margin-top:12px;margin-bottom:4px;font-family:var(--font-mono);font-size:11px;color:var(--accent);text-transform:uppercase;letter-spacing:0.08em">$1</h4>')
+    .replace(/^### (.+)$/gm, '<h4>$1</h4>')
+    .replace(/^## (.+)$/gm, '<h3>$1</h3>')
+    .replace(/^- \[x\]\s*(.+)$/gim, '<div class="task-item"><span class="task-check">&#10003;</span> <span style="text-decoration:line-through;opacity:0.5">$1</span></div>')
+    .replace(/^- \[ \]\s*(.+)$/gm, '<div class="task-item"><span class="task-pending">&#9679;</span> <span>$1</span></div>')
     .replace(/^- \*\*(.+?):\*\* (.+)$/gm, '<div class="tech-item"><span class="tech-label">$1</span> <span class="tech-value">$2</span></div>')
-    .replace(/^- (.+)$/gm, '<div class="tech-item">$1</div>')
+    .replace(/^- (.+)$/gm, '<div style="padding:2px 0;color:var(--text-secondary)">&#8226; $1</div>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/```([\s\S]*?)```/g, '<pre class="tech-tree">$1</pre>')
+    .replace(/`([^`]+)`/g, '<code style="font-family:var(--font-mono);font-size:12px;color:var(--accent);border:1px solid var(--accent-border);padding:1px 5px;background:var(--accent-dim)">$1</code>')
     .replace(/\n\n/g, '<br>');
+}
+
+function renderDetailSections(s) {
+  const showSections = ['Objective', 'Project Summary', 'Changes Made', 'Key Decisions', 'Blockers'];
+  return showSections.map(name => {
+    const content = s.sections?.[name];
+    if (!content || content.trim() === '_None._' || content.trim().startsWith('_None')) return '';
+    return `<div class="detail-section">
+      <h2>${escapeHtml(name)}</h2>
+      <div class="detail-section-content">${simpleMarkdown(content)}</div>
+    </div>`;
+  }).join('');
 }
 
 async function loadTechStack(sourceFolder) {
