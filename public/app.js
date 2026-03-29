@@ -363,11 +363,11 @@ function timeAgo(dateStr) {
   if (!dateStr) return '';
   const diff = Date.now() - new Date(dateStr).getTime();
   const mins = Math.floor(diff / 60000);
-  if (mins < 1) return 'now';
-  if (mins < 60) return `${mins}m`;
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
   const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h`;
-  return `${Math.floor(hrs / 24)}d`;
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
 }
 
 function cardHTML(s) {
@@ -445,8 +445,10 @@ function cardHTML(s) {
       </div>
       <div class="card-meta">
         ${sourceLabel}${vcLabel}${trackingLabel}${sessionCountLabel}${modeLabel}
+      </div>
+      <div class="card-meta-sub">
         ${s.current_branch || s.branch ? `<span>&#9702; ${escapeHtml(s.current_branch || s.branch)}</span>` : ''}
-        ${s.updated_at ? `<span>${timeAgo(s.updated_at)} ago</span>` : ''}
+        ${s.updated_at ? `<span>${timeAgo(s.updated_at)}</span>` : ''}
       </div>
       <div class="card-progress">
         <div class="card-ring">
@@ -510,7 +512,7 @@ function listRowHTML(s) {
       <div class="priority-badge priority-${s.priority || 'none'}">${(PRIORITY_CONFIG[s.priority || 'none'] || {}).label || ''}</div>
       <div><span class="status-badge status-${status}">${status.replace('_', ' ')}</span></div>
       <div class="list-row-tasks">${s.tasks.done}/${s.tasks.total}</div>
-      <div class="list-row-time">${s.updated_at ? timeAgo(s.updated_at) + ' ago' : ''}</div>
+      <div class="list-row-time">${s.updated_at ? timeAgo(s.updated_at) : ''}</div>
     </div>`;
 }
 

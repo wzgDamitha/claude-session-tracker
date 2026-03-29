@@ -628,9 +628,24 @@ main {
   font-family: var(--font-mono);
   font-size: 10px;
   color: var(--text-tertiary);
-  margin-bottom: 16px;
+  margin-bottom: 0;
   padding-left: 12px;
   flex-wrap: wrap;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.card-meta-sub {
+  display: flex;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-tertiary);
+  margin-bottom: 16px;
+  padding-left: 12px;
+  padding-top: 8px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
