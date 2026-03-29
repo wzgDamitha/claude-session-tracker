@@ -100,21 +100,56 @@ wizardFolderInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') wi
 
 // --- Discover ---
 const wizardDiscoverInput = document.getElementById('wizard-discover-input');
+const wizardDiscoverAddRoot = document.getElementById('wizard-discover-add-root');
 const wizardDiscoverBtn = document.getElementById('wizard-discover-btn');
 const wizardDiscoverResults = document.getElementById('wizard-discover-results');
 const wizardDiscoverList = document.getElementById('wizard-discover-list');
+const wizardDiscoverRootsList = document.getElementById('wizard-discover-roots-list');
 const wizardSelectAll = document.getElementById('wizard-select-all');
+let wizardDiscoverRoots = [];
+
+function renderWizardDiscoverRoots() {
+  wizardDiscoverRootsList.innerHTML = wizardDiscoverRoots.map((r, i) => `
+    <li><span>${escapeHtml(r)}</span><button class="remove-btn" data-index="${i}">&times;</button></li>
+  `).join('');
+  wizardDiscoverRootsList.querySelectorAll('.remove-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      wizardDiscoverRoots.splice(parseInt(btn.dataset.index), 1);
+      renderWizardDiscoverRoots();
+    });
+  });
+}
+
+wizardDiscoverAddRoot.addEventListener('click', () => {
+  const val = wizardDiscoverInput.value.trim();
+  if (val && !wizardDiscoverRoots.includes(val)) {
+    wizardDiscoverRoots.push(val);
+    wizardDiscoverInput.value = '';
+    renderWizardDiscoverRoots();
+  }
+});
 
 wizardDiscoverBtn.addEventListener('click', async () => {
-  const root = wizardDiscoverInput.value.trim();
-  if (!root) return;
+  // Collect roots: any in the list + whatever is typed in the input
+  const typed = wizardDiscoverInput.value.trim();
+  const roots = [...wizardDiscoverRoots];
+  if (typed && !roots.includes(typed)) {
+    roots.push(typed);
+    wizardDiscoverRoots.push(typed);
+    wizardDiscoverInput.value = '';
+    renderWizardDiscoverRoots();
+  }
+  if (roots.length === 0) return;
   wizardDiscoverBtn.textContent = 'Scanning...';
   wizardDiscoverBtn.disabled = true;
   try {
-    const res = await fetch(`/api/discover?root=${encodeURIComponent(root)}`);
-    const data = await res.json();
-    if (!res.ok) { showWizardError(data.error || 'Scan failed'); return; }
-    discoveredProjects = data.projects;
+    discoveredProjects = [];
+    for (const root of roots) {
+      const res = await fetch(`/api/discover?root=${encodeURIComponent(root)}`);
+      const data = await res.json();
+      if (!res.ok) { showWizardError(data.error || `Scan failed for ${root}`); continue; }
+      discoveredProjects.push(...data.projects);
+    }
     renderDiscoverResults();
     wizardDiscoverResults.classList.remove('hidden');
   } catch (err) {
@@ -125,7 +160,7 @@ wizardDiscoverBtn.addEventListener('click', async () => {
   }
 });
 
-wizardDiscoverInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') wizardDiscoverBtn.click(); });
+wizardDiscoverInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') wizardDiscoverAddRoot.click(); });
 
 wizardSelectAll.addEventListener('click', () => {
   discoveredProjects.forEach(p => { if (p.hasClaude) p._selected = true; });
@@ -185,7 +220,7 @@ wizardSaveBtn.addEventListener('click', async () => {
   } else {
     if (wizardFolders.length === 0) { showWizardError('Please add at least one folder.'); return; }
     body.watchFolders = wizardFolders;
-    body.discoverRoot = wizardDiscoverInput.value.trim();
+    body.discoverRoots = wizardDiscoverRoots;
   }
   try {
     const res = await fetch('/api/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
@@ -849,10 +884,16 @@ function renderSettings() {
     <div class="settings-section">
       <h3>Discover Projects</h3>
       <div class="settings-folder-add">
-        <input type="text" class="wizard-input" id="settings-discover-input" placeholder="Root folder to scan..." value="${escapeHtml(currentConfig.discoverRoot || '')}">
-        <button class="wizard-add-btn" id="settings-discover-btn">Scan</button>
+        <input type="text" class="wizard-input" id="settings-discover-input" placeholder="Root folder to scan...">
+        <button class="wizard-add-btn" id="settings-discover-add-root">Add</button>
+        <button class="wizard-add-btn" id="settings-discover-btn">Scan All</button>
       </div>
-      <p class="wizard-hint">Scan a root folder for projects with CLAUDE.md and add them.</p>
+      <ul class="settings-folders" id="settings-discover-roots-list">
+        ${(currentConfig.discoverRoots || []).map(r => `
+          <li><span>${escapeHtml(r)}</span><button class="remove-btn settings-discover-root-remove" data-root="${escapeHtml(r)}">&times;</button></li>
+        `).join('')}
+      </ul>
+      <p class="wizard-hint">Add root folders containing your projects, then scan to find ones with CLAUDE.md.</p>
       <div id="settings-discover-results"></div>
     </div>` : ''}
     <div class="settings-section">
@@ -912,22 +953,55 @@ function renderSettings() {
     });
 
     const discoverBtn = document.getElementById('settings-discover-btn');
+    const discoverAddRoot = document.getElementById('settings-discover-add-root');
     const discoverInput = document.getElementById('settings-discover-input');
+    const discoverRootsList = document.getElementById('settings-discover-roots-list');
     const discoverResults = document.getElementById('settings-discover-results');
+
+    // Remove discover root
+    discoverRootsList.querySelectorAll('.settings-discover-root-remove').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const roots = (currentConfig.discoverRoots || []).filter(r => r !== btn.dataset.root);
+        await fetch('/api/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...currentConfig, discoverRoots: roots }) });
+        await refreshConfig();
+        renderSettings();
+      });
+    });
+
+    // Add discover root
+    if (discoverAddRoot) {
+      discoverAddRoot.addEventListener('click', async () => {
+        const val = discoverInput.value.trim();
+        if (!val) return;
+        const roots = [...(currentConfig.discoverRoots || [])];
+        if (!roots.includes(val)) {
+          roots.push(val);
+          await fetch('/api/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...currentConfig, discoverRoots: roots }) });
+          await refreshConfig();
+        }
+        discoverInput.value = '';
+        renderSettings();
+      });
+      discoverInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') discoverAddRoot.click(); });
+    }
+
     if (discoverBtn) {
       discoverBtn.addEventListener('click', async () => {
-        const root = discoverInput.value.trim();
-        if (!root) return;
+        const roots = currentConfig.discoverRoots || [];
+        if (roots.length === 0) return;
         discoverBtn.textContent = 'Scanning...';
         discoverBtn.disabled = true;
         try {
-          const res = await fetch(`/api/discover?root=${encodeURIComponent(root)}`);
-          const data = await res.json();
-          if (!res.ok) { discoverResults.innerHTML = `<p style="color:var(--red);font-size:0.82rem;margin-top:0.5rem">${escapeHtml(data.error)}</p>`; return; }
+          let allProjects = [];
+          for (const root of roots) {
+            const res = await fetch(`/api/discover?root=${encodeURIComponent(root)}`);
+            const data = await res.json();
+            if (res.ok) allProjects.push(...data.projects);
+          }
           const currentFolders = currentConfig.watchFolders || [];
           discoverResults.innerHTML = `
             <ul class="discover-list" style="margin-top:0.75rem">
-              ${data.projects.map(p => {
+              ${allProjects.map(p => {
                 const added = currentFolders.some(f => f === p.sessionsPath || f === p.sessionsPath.replace(/\//g, '\\'));
                 const badges = [];
                 if (p.hasClaude) badges.push('<span class="discover-badge claude">CLAUDE.md</span>');
@@ -938,7 +1012,6 @@ function renderSettings() {
           discoverResults.querySelectorAll('.settings-discover-add').forEach(btn => {
             btn.addEventListener('click', async () => {
               await fetch('/api/config/folders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path: btn.dataset.path }) });
-              await fetch('/api/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...currentConfig, discoverRoot: root }) });
               await refreshConfig();
               renderSettings();
             });
@@ -946,11 +1019,10 @@ function renderSettings() {
         } catch (err) {
           discoverResults.innerHTML = `<p style="color:var(--red);font-size:0.82rem;margin-top:0.5rem">${escapeHtml(err.message)}</p>`;
         } finally {
-          discoverBtn.textContent = 'Scan';
+          discoverBtn.textContent = 'Scan All';
           discoverBtn.disabled = false;
         }
       });
-      discoverInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') discoverBtn.click(); });
     }
   }
 

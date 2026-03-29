@@ -7,7 +7,7 @@ const DEFAULT_CONFIG = {
   mode: null,
   sharedFolder: '',
   watchFolders: [],
-  discoverRoot: '',
+  discoverRoots: [],
   maxWidth: '100%',
   rowGap: '0px',
   columnGap: '0px',
@@ -25,7 +25,13 @@ function loadConfig() {
   }
   try {
     const raw = fs.readFileSync(CONFIG_PATH, 'utf-8');
-    return { ...DEFAULT_CONFIG, ...JSON.parse(raw) };
+    const parsed = { ...DEFAULT_CONFIG, ...JSON.parse(raw) };
+    // Migrate legacy discoverRoot string to discoverRoots array
+    if (parsed.discoverRoot && (!parsed.discoverRoots || parsed.discoverRoots.length === 0)) {
+      parsed.discoverRoots = [parsed.discoverRoot];
+    }
+    delete parsed.discoverRoot;
+    return parsed;
   } catch {
     return { ...DEFAULT_CONFIG };
   }

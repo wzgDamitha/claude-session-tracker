@@ -50,9 +50,11 @@
           <label class="wizard-label">Auto-discover projects:</label>
           <div class="wizard-folder-add">
             <input type="text" id="wizard-discover-input" class="wizard-input" placeholder="e.g. F:\Future (root folder containing your projects)">
-            <button class="wizard-add-btn" id="wizard-discover-btn">Scan</button>
+            <button class="wizard-add-btn" id="wizard-discover-add-root">Add</button>
+            <button class="wizard-add-btn" id="wizard-discover-btn">Scan All</button>
           </div>
-          <p class="wizard-hint">Enter a root folder that contains your project directories. We'll find ones with CLAUDE.md.</p>
+          <ul class="wizard-folder-list" id="wizard-discover-roots-list"></ul>
+          <p class="wizard-hint">Add root folders that contain your project directories, then scan to find projects with CLAUDE.md.</p>
 
           <div id="wizard-discover-results" class="hidden">
             <div class="discover-header">

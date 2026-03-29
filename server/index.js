@@ -79,7 +79,7 @@ app.get('/api/config', (req, res) => {
 });
 
 app.post('/api/config', (req, res) => {
-  const { mode, sharedFolder, watchFolders, discoverRoot, port, maxWidth, rowGap, columnGap, fontScale } = req.body;
+  const { mode, sharedFolder, watchFolders, discoverRoots, discoverRoot, port, maxWidth, rowGap, columnGap, fontScale } = req.body;
 
   // Allow reset (mode: null)
   if (mode === null) {
@@ -131,7 +131,7 @@ app.post('/api/config', (req, res) => {
     mode,
     sharedFolder: mode === 'shared' ? sharedFolder : '',
     watchFolders: mode === 'individual' ? watchFolders : [],
-    discoverRoot: discoverRoot || '',
+    discoverRoots: discoverRoots || (discoverRoot ? [discoverRoot] : []),
     port: port || 3890,
     maxWidth: maxWidth || '100%',
     rowGap: rowGap || '0px',
