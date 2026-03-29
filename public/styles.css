@@ -1428,10 +1428,6 @@ main {
   background: rgba(167, 139, 250, 0.06);
 }
 
-.agent-note-entry {
-  border-left: 2px solid var(--purple, #a78bfa);
-}
-
 .user-note-body {
   font-size: 14px;
   color: var(--text-secondary);
