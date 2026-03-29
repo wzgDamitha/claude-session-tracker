@@ -692,6 +692,11 @@ function openDetail(s) {
     <div class="user-notes" id="user-notes" data-source="${escapeHtml(s.sourceFolder)}">
       <div class="user-notes-header">
         <span class="user-notes-title">// Notes</span>
+        <div class="notes-tabs">
+          <button class="notes-tab active" data-notes-filter="all">All</button>
+          <button class="notes-tab" data-notes-filter="user">User</button>
+          <button class="notes-tab" data-notes-filter="agent">Agent</button>
+        </div>
         <span class="user-notes-count" id="notes-count"></span>
       </div>
       <div class="user-notes-entries" id="notes-entries">
@@ -786,35 +791,56 @@ function closeDetail() {
   appEl.classList.remove('hidden');
 }
 
-async function loadNotes(sourceFolder) {
+let allNotes = [];
+let activeNotesFilter = 'all';
+
+function renderNoteEntries() {
   const entriesEl = document.getElementById('notes-entries');
   const countEl = document.getElementById('notes-count');
+  const filtered = activeNotesFilter === 'all' ? allNotes : allNotes.filter(e => e.source === activeNotesFilter);
+
+  if (filtered.length === 0) {
+    entriesEl.innerHTML = `<div class="user-notes-empty">${allNotes.length === 0 ? 'No notes yet. Add one for the next session to pick up.' : 'No ' + activeNotesFilter + ' notes.'}</div>`;
+    countEl.textContent = allNotes.length > 0 ? `${allNotes.length} note${allNotes.length > 1 ? 's' : ''}` : '';
+  } else {
+    countEl.textContent = `${filtered.length} note${filtered.length > 1 ? 's' : ''}`;
+    entriesEl.innerHTML = filtered.map(e => {
+      const isAgent = e.source === 'agent';
+      const badgeClass = isAgent ? 'note-badge-agent' : 'note-badge-user';
+      const badgeLabel = isAgent ? 'agent' : 'user';
+      return `
+        <div class="user-note-entry ${isAgent ? 'agent-note-entry' : ''}">
+          <div class="user-note-time">
+            <span class="note-badge ${badgeClass}">${badgeLabel}</span>
+            ${escapeHtml(e.timestamp)}
+          </div>
+          <div class="user-note-body">${escapeHtml(e.body)}</div>
+        </div>
+      `;
+    }).join('');
+    entriesEl.scrollTop = entriesEl.scrollHeight;
+  }
+}
+
+async function loadNotes(sourceFolder) {
   try {
     const res = await fetch(`/api/notes?source=${encodeURIComponent(sourceFolder)}`);
     const data = await res.json();
-    if (data.entries.length === 0) {
-      entriesEl.innerHTML = '<div class="user-notes-empty">No notes yet. Add one for the next session to pick up.</div>';
-      countEl.textContent = '';
-    } else {
-      countEl.textContent = `${data.entries.length} note${data.entries.length > 1 ? 's' : ''}`;
-      entriesEl.innerHTML = data.entries.map(e => {
-        const isAgent = e.source === 'agent';
-        const badgeClass = isAgent ? 'note-badge-agent' : 'note-badge-user';
-        const badgeLabel = isAgent ? 'agent' : 'user';
-        return `
-          <div class="user-note-entry ${isAgent ? 'agent-note-entry' : ''}">
-            <div class="user-note-time">
-              <span class="note-badge ${badgeClass}">${badgeLabel}</span>
-              ${escapeHtml(e.timestamp)}
-            </div>
-            <div class="user-note-body">${escapeHtml(e.body)}</div>
-          </div>
-        `;
-      }).join('');
-      entriesEl.scrollTop = entriesEl.scrollHeight;
-    }
+    allNotes = data.entries;
+    activeNotesFilter = 'all';
+    renderNoteEntries();
+
+    // Wire up tabs
+    document.querySelectorAll('.notes-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.notes-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        activeNotesFilter = tab.dataset.notesFilter;
+        renderNoteEntries();
+      });
+    });
   } catch (err) {
-    entriesEl.innerHTML = `<div class="user-notes-empty" style="color:var(--red)">Failed to load notes</div>`;
+    document.getElementById('notes-entries').innerHTML = `<div class="user-notes-empty" style="color:var(--red)">Failed to load notes</div>`;
   }
 }
 
