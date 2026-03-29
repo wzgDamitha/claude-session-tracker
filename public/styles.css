@@ -704,6 +704,8 @@ main {
 
 /* Badges */
 .source-tag, .update-mode-tag, .tracking-badge, .session-count-tag {
+  display: flex;
+  align-items: center;
   font-family: var(--font-mono);
   font-size: 9px;
   text-transform: uppercase;
@@ -720,13 +722,20 @@ main {
 .session-count-tag { color: var(--text-tertiary); }
 
 .vc-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-family: var(--font-mono);
   font-size: 9px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  padding: 1px 6px;
+  padding: 2px 7px;
   border: 1px solid;
+}
+
+.vc-badge svg {
+  flex-shrink: 0;
 }
 
 .vc-remote {

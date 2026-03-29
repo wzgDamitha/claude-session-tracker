@@ -6,6 +6,9 @@ let searchQuery = '';
 let currentConfig = null;
 
 const PRIORITY_ORDER = { critical: 0, high: 1, medium: 2, low: 3, none: 4 };
+const VC_GIT_ICON = '<svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M5.45 5.154A4.25 4.25 0 0 0 9.25 7.5h1.378a2.251 2.251 0 1 1 0 1.5H9.25A5.734 5.734 0 0 1 5 7.123v3.505a2.25 2.25 0 1 1-1.5 0V5.372a2.25 2.25 0 1 1 1.95-.218ZM4.25 13.5a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Zm8.5-4.5a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5ZM5 3.25a.75.75 0 1 0-1.5 0 .75.75 0 0 0 1.5 0Z"/></svg>';
+const VC_CLOUD_ICON = '<svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M4.5 12a3.5 3.5 0 0 1-.95-6.87A5.002 5.002 0 0 1 13.35 6.1 3.001 3.001 0 0 1 13 12H4.5ZM8 2a4 4 0 0 0-3.83 2.82A2.5 2.5 0 0 0 4.5 11H13a2 2 0 1 0-.22-3.99A4.001 4.001 0 0 0 8 2Z"/></svg>';
+const VC_FOLDER_ICON = '<svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M1.75 1A1.75 1.75 0 0 0 0 2.75v10.5C0 14.216.784 15 1.75 15h12.5A1.75 1.75 0 0 0 16 13.25v-8.5A1.75 1.75 0 0 0 14.25 3H7.5a.25.25 0 0 1-.2-.1l-.9-1.2C6.07 1.26 5.55 1 5 1H1.75Z"/></svg>';
 const PRIORITY_CONFIG = {
   critical: { label: '!!!', color: '--red' },
   high: { label: '!!', color: '--yellow' },
@@ -384,9 +387,9 @@ function cardHTML(s) {
   // Badges
   const tags = (s.tags || []).map(t => `<span class="tag">${escapeHtml(t)}</span>`).join('');
   const sourceLabel = s.sourceName ? `<span class="source-tag">${escapeHtml(s.sourceName)}</span>` : '';
-  const vcLabel = s.version_control === 'git_remote' ? '<span class="vc-badge vc-remote">git:remote</span>'
-    : s.version_control === 'git_local' ? '<span class="vc-badge vc-local">git:local</span>'
-    : s.version_control === 'none' ? '<span class="vc-badge vc-none">no git</span>' : '';
+  const vcLabel = s.version_control === 'git_remote' ? `<span class="vc-badge vc-remote">${VC_CLOUD_ICON}remote</span>`
+    : s.version_control === 'git_local' ? `<span class="vc-badge vc-local">${VC_GIT_ICON}local</span>`
+    : s.version_control === 'none' ? `<span class="vc-badge vc-none">${VC_FOLDER_ICON}no git</span>` : '';
   const modeLabel = s.update_mode ? `<span class="update-mode-tag">${escapeHtml(s.update_mode)}</span>` : '';
   const trackingLabel = s.tracking_start === 'mid_project' ? '<span class="tracking-badge tracking-mid">mid-project</span>'
     : s.tracking_start === 'full' ? '<span class="tracking-badge tracking-full">full</span>' : '';
@@ -656,9 +659,9 @@ function openDetail(s) {
         ${['none','low','medium','high','critical'].map(p => `<option value="${p}" ${(s.priority||'none')===p?'selected':''}>${p}</option>`).join('')}
       </select>
       ${s.sourceName ? `<span class="source-tag">${escapeHtml(s.sourceName)}</span>` : ''}
-      ${s.version_control === 'git_remote' ? '<span class="vc-badge vc-remote">git:remote</span>'
-        : s.version_control === 'git_local' ? '<span class="vc-badge vc-local">git:local</span>'
-        : s.version_control === 'none' ? '<span class="vc-badge vc-none">no git</span>' : ''}
+      ${s.version_control === 'git_remote' ? `<span class="vc-badge vc-remote">${VC_CLOUD_ICON}remote</span>`
+        : s.version_control === 'git_local' ? `<span class="vc-badge vc-local">${VC_GIT_ICON}local</span>`
+        : s.version_control === 'none' ? `<span class="vc-badge vc-none">${VC_FOLDER_ICON}no git</span>` : ''}
       ${s.current_session ? `<span>current: ${escapeHtml(s.current_session)}</span>` : ''}
       ${s.current_branch || s.branch ? `<span>&#9702; ${escapeHtml(s.current_branch || s.branch)}</span>` : ''}
       ${s.created_at ? `<span>since ${new Date(s.created_at).toLocaleDateString()}</span>` : ''}
