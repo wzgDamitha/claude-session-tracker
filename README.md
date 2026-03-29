@@ -46,10 +46,11 @@ Your Projects                          Dashboard (localhost:3890)
 │   session-tracker.md │               │ │!! 65%│ │  100%│  ...    │
 │   notes.md           │               │ └──────┘ └──────┘         │
 │   agent-notes.md     │               │                            │
-├─────────────────────┤               │ Grid · List · Timeline    │
-│ project-b/           │──────────────▶│ Search · Filter · Priority│
-│  .claude/sessions/   │               │ Notes · Activity Log      │
-│   session-tracker.md │               └────────────────────────────┘
+│   tech-stack.md      │               │ Grid · List · Timeline    │
+├─────────────────────┤               │ Search · Filter · Priority│
+│ project-b/           │──────────────▶│ Notes · Activity Log      │
+│  .claude/sessions/   │               └────────────────────────────┘
+│   session-tracker.md │
 │   notes.md           │
 │   agent-notes.md     │
 └─────────────────────┘
@@ -71,7 +72,7 @@ On first launch, choose one of two modes:
 | **Individual Folders** | Each project has its own `.claude/sessions/` folder (recommended) |
 
 For **Individual Folders**, you can either:
-- **Auto-discover** — add one or more root folders and the app scans recursively (up to 3 levels deep) for projects with `CLAUDE.md` or `.claude/sessions`. Nested projects (e.g. a monorepo with sub-projects) are detected and listed with their relative paths so you can pick which ones to track.
+- **Auto-discover** — add one or more root folders and the app scans recursively (up to 3 levels deep) for projects with `CLAUDE.md` or `.claude/sessions`. Nested projects are detected and listed with their relative paths so you can pick which ones to track.
 - **Add manually** — paste specific folder paths
 
 Config is saved to `tracker-config.json` (gitignored, portable between machines).
@@ -82,22 +83,24 @@ Control how often the agent updates the tracking file:
 
 | Mode | Behavior | Token Cost |
 |------|----------|------------|
-| **auto** | Updates after every prompt/response cycle. One activity log entry per interaction — most granular history. | Highest — writes on every turn, adds up in long sessions. |
-| **manual** | Updates only when you ask (e.g. "update tracker"). Batches recent work into summary entries. | Medium — **recommended default**. You control when tokens are spent. |
-| **budget** | Updates twice per session — start and end only. No intermediate writes. | Lowest — best for tight budgets, less granular tracking. |
+| **auto** | Updates after every prompt/response cycle. One activity log entry per interaction. | Highest — writes on every turn. |
+| **manual** | Updates only when you ask (e.g. "update tracker"). Batches recent work into summaries. | Medium — **recommended default**. |
+| **budget** | Updates twice per session — start and end only. Agent only reads frontmatter + Notes at start. | Lowest — best for tight budgets. |
 
-Every time the agent writes to the session file it consumes tokens for reading the current state, deciding what to add, and producing the updated content. **manual** is the recommended default. Switch to **budget** for minimal overhead, or **auto** for a detailed per-interaction audit trail.
+The agent instruction file has been optimized to ~220 lines (down from ~450) to reduce token consumption on every read. Activity logs are capped at 15 entries and Changes Made at 5 sessions — older entries are archived automatically to keep the tracking file bounded.
 
 ## Features
 
 ### Notes — User & Agent
 
-The dashboard has a unified notes timeline that shows both user and agent notes, each with a distinct badge:
+- **User notes** (`notes.md`) — leave notes from the dashboard for the next session
+- **Agent notes** (`agent-notes.md`) — agents leave notes for you and future sessions
 
-- **User notes** (`notes.md`) — leave notes from the dashboard for the next session. The agent reads these but never modifies them.
-- **Agent notes** (`agent-notes.md`) — agents leave notes for you and future sessions (decisions, warnings, handoff context, questions).
+Both shown in a unified timeline with **[user]** and **[agent]** badges. Use the **All / User / Agent** tabs to filter.
 
-Both are displayed together in chronological order with **[user]** and **[agent]** badges. Use the **All / User / Agent** tabs to filter.
+### Tech Stack
+
+Agents can create a `tech-stack.md` file on request with the project's stack, structure, core features, and recent changes. Shown as a collapsible section in the detail view. Updated when decisions affect the stack.
 
 ### Three Views
 
@@ -109,91 +112,83 @@ Both are displayed together in chronological order with **[user]** and **[agent]
 
 ### Card Tags & Badges
 
-Each card displays tags so you can understand the state of a project at a glance:
+Each card shows two rows of metadata:
+
+**Badge row:** source, version control, tracking mode, session count, update mode
+
+**Info row:** git branch, last updated time
 
 | Tag | Example | Meaning |
 |-----|---------|---------|
 | **Status** | `in progress`, `completed`, `blocked`, `failed` | Current state of the project |
-| **Priority** | `!!!`, `!!`, `!`, `~` | Urgency level — critical, high, medium, low. Set from the detail view. |
+| **Priority** | `!!!`, `!!`, `!`, `~` | Urgency level — critical, high, medium, low |
 | **Source** | `my-app` | Which project folder this session belongs to |
-| **Tracking** | `full`, `mid-project` | How tracking was started — `full` means from project inception, `mid-project` means tracking was added to an existing project |
-| **Update Mode** | `auto`, `manual`, `budget` | How often the agent updates the tracking file. See [Update Modes](#update-modes--token-usage). |
+| **Version Control** | `remote`, `local`, `no git` | Git status shown with an icon |
+| **Tracking** | `full`, `mid-project` | `full` = from inception, `mid-project` = added to existing project |
+| **Update Mode** | `auto`, `manual`, `budget` | How often the agent updates the file |
 | **Session Count** | `3 sess` | Number of Claude sessions that have worked on this project |
-| **Branch** | `● master`, `● feature/auth` | The git branch the current session is working on (e.g. `main`, `master`, `feature/auth`) |
-| **Updated** | `2 hours ago` | Time since the tracking file was last modified |
-| **Version Control** | `remote`, `local`, `no git` | Whether the project uses git with a remote, git locally only, or no git. Shown with an icon. |
-| **Tags** | `backend`, `auth` | Custom keywords set by the agent for categorization. Used in search. |
+| **Branch** | `● master` | Current git branch |
+| **Updated** | `just now`, `2h ago` | Time since the tracking file was last modified |
+| **Tags** | `backend`, `auth` | Custom keywords for categorization and search |
 
 #### Color Meaning
-
-Colors are used consistently across the dashboard:
 
 | Color | Meaning |
 |-------|---------|
 | **Cyan** | Active / in progress / current |
 | **Green** | Completed / full tracking |
-| **Yellow** | Needs attention — blocked or mid-project tracking |
+| **Yellow** | Needs attention — blocked or mid-project |
 | **Red** | Failed or error |
-| **Purple** | Source project identifier / agent notes |
+| **Purple** | Source project / agent notes |
 | **Gray** | Inactive / low priority / informational |
 
-#### Detail View
+### Detail View
 
-Click any project to open a full detail page. In addition to the card tags above, you'll see:
+Two-column layout: main content on the left, progress ring + session history in a sidebar.
+
+**Meta rows** are grouped by type:
+- Primary: status, priority, progress, task count
+- Context: repository, branch, VC, model, update mode, source
+- Temporal: created, updated, session count, tracking, current session
+
+**Sections shown:** Objective, Project Summary, Changes Made, Key Decisions, Blockers. Tasks, Activity Log, and Notes are shown by their own dedicated widgets instead of duplicating raw markdown.
+
+**Activity timeline** shows the last 8 entries by default with a "Show all" toggle.
 
 | Element | Meaning |
 |---------|---------|
-| **Session history chips** | All session IDs that contributed to this project. The current session is highlighted. |
-| **[user] / [agent] badges** | Who wrote each note in the notes timeline |
-| **Repository** | The `owner/repo` identifier |
-| **Agent model** | Which Claude model ran the session (e.g. `claude-opus-4-6`) |
-| **Progress ring** | Visual progress indicator (0–100%) |
-| **Pending tasks** | Remaining unchecked tasks from the tracking file |
-| **Handoff notes** | Notes the agent left for the next session to continue from |
-| **Tech stack** | Collapsible section showing the project's tech stack, structure, and recent changes (from `tech-stack.md`) |
-| **Notes filter tabs** | Toggle between All, User, or Agent notes |
+| **Progress ring** | Visual progress (0–100%) in the sidebar |
+| **Session history chips** | All session IDs that contributed, current highlighted |
+| **Tech stack** | Collapsible section from `tech-stack.md` |
+| **Pending tasks** | Remaining unchecked tasks |
+| **Handoff notes** | Notes the agent left for the next session |
+| **Notes panel** | User + agent notes with filter tabs |
 
 ### Search & Filter
 
-- **Search bar** — instantly filter by project title, tags, branch, or repository
+- **Search bar** — filter by project title, tags, branch, or repository
 - **Status filters** — All, In Progress, Completed, Blocked, Failed
 
 ### Priority
 
-Set priority per project from the detail view: **critical** (`!!!`), **high** (`!!`), **medium** (`!`), **low** (`~`), or **none**.
-
-Projects auto-sort by priority first, then by last updated.
+Set per project from the detail view: **critical** (`!!!`), **high** (`!!`), **medium** (`!`), **low** (`~`), or **none**. Projects auto-sort by priority first, then by last updated.
 
 ### Display Settings
 
-Adjust the dashboard layout using the floating gear button (bottom-right corner):
+Floating gear button (bottom-right) or the settings modal:
 
-- **Max Width** — dashboard max width, full width or fixed (e.g. 1400px)
+- **Max Width** — dashboard max width
 - **Detail Max Width** — detail view max width (default 900px)
 - **Row / Column Gap** — spacing between cards
-- **Font Scale** — 70% to 150%, applies to all views including detail
+- **Font Scale** — 70% to 150%, applies to all views
 
-All inputs use a number + unit dropdown (px, %, rem, em, vw). Settings persist across page refreshes.
-
-### One File Per Project
-
-Every project has a single file: `.claude/sessions/session-tracker.md`
-
-Multiple sessions update the same file. The dashboard tracks which sessions contributed, session boundaries in the activity timeline, and the current active session and branch.
+All inputs use number + unit dropdown (px, %, rem, em, vw). Settings persist across refreshes.
 
 ### Multi-Project Support
 
 - Watch multiple project folders simultaneously
-- Each card shows which project it belongs to
-- **Auto-discover** projects by scanning multiple root folders for `CLAUDE.md` (recursive, finds nested projects)
+- **Auto-discover** projects recursively across multiple root folders
 - Add/remove projects anytime via Settings
-
-### New vs Existing Projects
-
-| `tracking_start` | Behavior |
-|-------------------|----------|
-| `full` | Tracks everything from the beginning — complete activity log |
-| `mid_project` | Agent does a quick scan, writes a Project Summary of prior work, then logs normally. |
 
 ### Live Reload
 
@@ -223,8 +218,6 @@ Generated on first run. Edit directly or use the Settings UI.
 }
 ```
 
-All display settings are persisted to this file and restored on page refresh.
-
 ### Environment Variables
 
 | Variable | Default | Description |
@@ -241,6 +234,7 @@ Each project's `session-tracker.md` uses YAML frontmatter + markdown:
 title: "My Project"
 repository: "owner/repo"
 status: "in_progress"
+version_control: "git_remote"
 priority: "high"
 tracking_start: "full"
 created_at: "2026-03-28T10:00:00Z"
@@ -254,23 +248,24 @@ progress: 65
 ---
 ```
 
-Sections: Objective, Project Summary (mid-project only), Tasks, Changes Made (grouped by session), Key Decisions, Blockers, Activity Log (timestamped with session boundaries), Notes.
+Sections: Objective, Project Summary (mid-project only), Tasks, Changes Made, Key Decisions, Blockers, Activity Log, Notes.
 
-See [`claude-session-track.md`](claude-session-track.md) for the complete agent instruction specification.
+See [`claude-session-track.md`](claude-session-track.md) for the agent instruction specification.
 
 ## API Endpoints
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/api/sessions` | GET | All sessions from all watched folders |
-| `/api/sessions/:file` | GET | Single session (optional `?source=` folder) |
-| `/api/sessions/:file` | PATCH | Update session frontmatter (priority, etc.) |
+| `/api/sessions/:file` | GET | Single session |
+| `/api/sessions/:file` | PATCH | Update frontmatter (priority, etc.) |
 | `/api/config` | GET | Current configuration |
 | `/api/config` | POST | Save configuration |
 | `/api/config/folders` | POST | Add a watch folder |
 | `/api/config/folders` | DELETE | Remove a watch folder |
-| `/api/discover?root=` | GET | Scan folder for projects with CLAUDE.md |
-| `/api/notes?source=` | GET | Get merged user + agent notes for a project |
+| `/api/discover?root=` | GET | Scan folder for projects (recursive) |
+| `/api/tech-stack?source=` | GET | Get parsed tech stack file |
+| `/api/notes?source=` | GET | Get merged user + agent notes |
 | `/api/notes?source=` | POST | Add a user note |
 | `/api/events` | GET | SSE stream for live reload |
 
