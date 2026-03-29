@@ -65,7 +65,7 @@ On first launch, choose one of two modes:
 | **Individual Folders** | Each project has its own `.claude/sessions/` folder (recommended) |
 
 For **Individual Folders**, you can either:
-- **Auto-discover** — enter a root folder (e.g., `F:\Future`) and the app scans for projects with `CLAUDE.md`
+- **Auto-discover** — add one or more root folders and the app scans for projects with `CLAUDE.md`
 - **Add manually** — paste specific folder paths
 
 Config is saved to `tracker-config.json` (gitignored, portable between machines).
@@ -91,7 +91,7 @@ The dashboard has a unified notes timeline that shows both user and agent notes,
 - **User notes** (`notes.md`) — leave notes from the dashboard for the next session. The agent reads these but never modifies them.
 - **Agent notes** (`agent-notes.md`) — agents leave notes for you and future sessions (decisions, warnings, handoff context, questions).
 
-Both are displayed together in chronological order with **[user]** and **[agent]** badges. Agent notes are visually distinguished with a purple accent.
+Both are displayed together in chronological order with **[user]** and **[agent]** badges.
 
 ### Three Views
 
@@ -99,32 +99,50 @@ Both are displayed together in chronological order with **[user]** and **[agent]
 |------|-------------|
 | **Grid** | Cards with progress rings, pending tasks, notes preview |
 | **List** | Compact table with priority, status, tasks, timestamps |
-| **Timeline** | Horizontal bars showing project time spans, color-coded by status |
+| **Timeline** | Horizontal bars showing project time spans |
 
 ### Card Tags & Badges
 
-Each card displays contextual tags to give you a quick overview at a glance:
+Each card displays tags so you can understand the state of a project at a glance:
 
 | Tag | Example | Meaning |
 |-----|---------|---------|
-| **Status** | `in progress`, `completed`, `blocked`, `failed` | Current state of the session. Color-coded: cyan for active/done, yellow for blocked, red for failed. |
-| **Priority** | `!!!`, `!!`, `!`, `~` | Urgency level — critical (red), high (yellow), medium (cyan), low (gray). Set from the detail view. |
-| **Source** | `my-app` | Which project folder the session belongs to. Purple badge. |
-| **Tracking** | `full`, `mid-project` | How tracking started — `full` (green) means from project inception, `mid-project` (yellow) means added to an existing project. |
+| **Status** | `in progress`, `completed`, `blocked`, `failed` | Current state of the project |
+| **Priority** | `!!!`, `!!`, `!`, `~` | Urgency level — critical, high, medium, low. Set from the detail view. |
+| **Source** | `my-app` | Which project folder this session belongs to |
+| **Tracking** | `full`, `mid-project` | How tracking was started — `full` means from project inception, `mid-project` means tracking was added to an existing project |
 | **Update Mode** | `auto`, `manual`, `budget` | How often the agent updates the tracking file. See [Update Modes](#update-modes--token-usage). |
-| **Session Count** | `3 sess` | Number of Claude sessions that have contributed to this project. |
-| **Branch** | `● feature/auth` | Current git branch the session is working on. |
-| **Updated** | `2 hours ago` | Time since the tracking file was last modified. |
+| **Session Count** | `3 sess` | Number of Claude sessions that have worked on this project |
+| **Branch** | `● master`, `● feature/auth` | The git branch the current session is working on (e.g. `main`, `master`, `feature/auth`) |
+| **Updated** | `2 hours ago` | Time since the tracking file was last modified |
 | **Tags** | `backend`, `auth` | Custom keywords set by the agent for categorization. Used in search. |
 
-In the **detail view**, you'll also see:
+#### Color Meaning
 
-| Tag | Meaning |
-|-----|---------|
-| **Session history chips** | List of all session IDs that contributed. The current/latest session is highlighted in cyan. |
-| **[user] / [agent] note badges** | Who wrote each note — cyan for user, purple for agent. |
-| **Repository** | The `owner/repo` identifier. |
-| **Agent model** | Which Claude model is running the session (e.g. `claude-opus-4-6`). |
+Colors are used consistently across the dashboard:
+
+| Color | Meaning |
+|-------|---------|
+| **Cyan** | Active / in progress / current |
+| **Green** | Completed / full tracking |
+| **Yellow** | Needs attention — blocked or mid-project tracking |
+| **Red** | Failed or error |
+| **Purple** | Source project identifier / agent notes |
+| **Gray** | Inactive / low priority / informational |
+
+#### Detail View
+
+Click any project to open a full detail page. In addition to the card tags above, you'll see:
+
+| Element | Meaning |
+|---------|---------|
+| **Session history chips** | All session IDs that contributed to this project. The current session is highlighted. |
+| **[user] / [agent] badges** | Who wrote each note in the notes timeline |
+| **Repository** | The `owner/repo` identifier |
+| **Agent model** | Which Claude model ran the session (e.g. `claude-opus-4-6`) |
+| **Progress ring** | Visual progress indicator (0–100%) |
+| **Pending tasks** | Remaining unchecked tasks from the tracking file |
+| **Handoff notes** | Notes the agent left for the next session to continue from |
 
 ### Search & Filter
 
@@ -139,7 +157,7 @@ Projects auto-sort by priority first, then by last updated.
 
 ### Display Settings
 
-Adjust the dashboard layout without opening the full settings modal using the floating gear button (bottom-right corner):
+Adjust the dashboard layout using the floating gear button (bottom-right corner):
 
 - **Max Width** — full width or fixed (e.g. 1400px)
 - **Row / Column Gap** — spacing between cards
@@ -147,31 +165,17 @@ Adjust the dashboard layout without opening the full settings modal using the fl
 
 All inputs use a number + unit dropdown (px, %, rem, em, vw). Settings persist across page refreshes.
 
-### Full-Screen Detail View
-
-Click any project to open a full-screen detail page with:
-- Progress ring with glow effect
-- Remaining tasks shown at the top
-- Handoff notes prominently displayed
-- Notes timeline (user + agent) with comment thread
-- Session history chips
-- Activity timeline with session boundary markers
-- Full rendered markdown content
-
 ### One File Per Project
 
 Every project has a single file: `.claude/sessions/session-tracker.md`
 
-Multiple sessions update the same file. The dashboard tracks:
-- Which sessions contributed (session history chips)
-- Session boundaries in the activity timeline (highlighted markers)
-- Current active session and branch
+Multiple sessions update the same file. The dashboard tracks which sessions contributed, session boundaries in the activity timeline, and the current active session and branch.
 
 ### Multi-Project Support
 
 - Watch multiple project folders simultaneously
 - Each card shows which project it belongs to
-- **Auto-discover** projects by scanning a root folder for `CLAUDE.md`
+- **Auto-discover** projects by scanning multiple root folders for `CLAUDE.md`
 - Add/remove projects anytime via Settings
 
 ### New vs Existing Projects
@@ -181,11 +185,9 @@ Multiple sessions update the same file. The dashboard tracks:
 | `full` | Tracks everything from the beginning — complete activity log |
 | `mid_project` | Agent does a quick scan, writes a Project Summary of prior work, then logs normally. |
 
-The dashboard visually distinguishes these with badges: **full** (green) vs **mid-project** (yellow).
-
 ### Live Reload
 
-The dashboard auto-updates when session files change — no manual refresh needed. Powered by Server-Sent Events watching all configured folders.
+The dashboard auto-updates when session files change — no manual refresh needed.
 
 ## Configuration
 
@@ -201,7 +203,7 @@ Generated on first run. Edit directly or use the Settings UI.
     "C:\\Projects\\my-app\\.claude\\sessions",
     "C:\\Projects\\api-server\\.claude\\sessions"
   ],
-  "discoverRoot": "C:\\Projects",
+  "discoverRoots": ["C:\\Projects", "D:\\Work"],
   "maxWidth": "100%",
   "rowGap": "0px",
   "columnGap": "0px",
@@ -271,7 +273,7 @@ claude-session-tracker/
 ├── public/
 │   ├── index.html            // Dashboard HTML + setup wizard
 │   ├── app.js                // Frontend logic
-│   └── styles.css            // WZG-inspired dark theme
+│   └── styles.css            // Dark theme
 ├── claude-session-track.md   // Agent instruction file (share this)
 ├── SESSION_TEMPLATE.md       // Quick reference template
 ├── tracker-config.json       // Generated on first run (gitignored)
@@ -283,8 +285,6 @@ claude-session-tracker/
 ```bash
 npm run dev    # Starts with --watch for auto-restart on server changes
 ```
-
-This is a free, open-source tool. Fork it, modify it, connect your own notification services, or extend it however you like.
 
 ## Design
 
