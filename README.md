@@ -6,28 +6,6 @@ Built with Claude by Damitha from [WebZGarden](https://webzgarden.com)
 
 ![Dashboard](https://img.shields.io/badge/localhost-3890-blue) ![Node](https://img.shields.io/badge/node-%3E%3D18-green) ![License](https://img.shields.io/badge/license-MIT-gray)
 
-## How It Works
-
-```
-Your Projects                          Dashboard (localhost:3890)
-┌─────────────────────┐
-│ project-a/           │               ┌────────────────────────────┐
-│  .claude/sessions/   │──────────────▶│ ┌──────┐ ┌──────┐         │
-│   session-tracker.md │               │ │!! 65%│ │  100%│  ...    │
-│   notes.md           │               │ └──────┘ └──────┘         │
-├─────────────────────┤               │                            │
-│ project-b/           │──────────────▶│ Grid · List · Timeline    │
-│  .claude/sessions/   │               │ Search · Filter · Priority│
-│   session-tracker.md │               │ Notes · Activity Log      │
-│   notes.md           │               └────────────────────────────┘
-└─────────────────────┘
-```
-
-1. You tell a Claude Code session to read `claude-session-track.md`
-2. The agent writes/updates `.claude/sessions/session-tracker.md` in the project
-3. You leave notes from the dashboard — the agent reads them next session
-4. The dashboard watches those files and shows live progress
-
 ## Quick Start
 
 ```bash
@@ -38,6 +16,44 @@ npm start
 ```
 
 Open **http://localhost:3890** — the setup wizard will guide you through configuration.
+
+## Telling Your Agent to Track
+
+Copy-paste one of these into your Claude Code session:
+
+**New project:**
+> Read `claude-session-track.md` and follow its instructions. This is a new project — use `tracking_start: "full"`. Use **manual** mode.
+
+**Existing project (first time tracking):**
+> Read `claude-session-track.md` and follow its instructions. This project has existing work — use `tracking_start: "mid_project"`. Use **manual** mode.
+
+**Continuing (file already exists):**
+> Read `claude-session-track.md` and follow its instructions. The tracking file already exists at `.claude/sessions/session-tracker.md` — read it and continue from where the last session left off. Use **manual** mode.
+
+## How It Works
+
+```
+Your Projects                          Dashboard (localhost:3890)
+┌─────────────────────┐
+│ project-a/           │               ┌────────────────────────────┐
+│  .claude/sessions/   │──────────────▶│ ┌──────┐ ┌──────┐         │
+│   session-tracker.md │               │ │!! 65%│ │  100%│  ...    │
+│   notes.md           │               │ └──────┘ └──────┘         │
+│   agent-notes.md     │               │                            │
+├─────────────────────┤               │ Grid · List · Timeline    │
+│ project-b/           │──────────────▶│ Search · Filter · Priority│
+│  .claude/sessions/   │               │ Notes · Activity Log      │
+│   session-tracker.md │               └────────────────────────────┘
+│   notes.md           │
+│   agent-notes.md     │
+└─────────────────────┘
+```
+
+1. You tell a Claude Code session to read `claude-session-track.md`
+2. The agent writes/updates `.claude/sessions/session-tracker.md` in the project
+3. You leave notes from the dashboard — the agent reads them next session
+4. The agent leaves notes in `agent-notes.md` — you see them in the dashboard
+5. The dashboard watches those files and shows live progress
 
 ### First-Run Setup
 
@@ -54,20 +70,28 @@ For **Individual Folders**, you can either:
 
 Config is saved to `tracker-config.json` (gitignored, portable between machines).
 
-## Telling Your Agent to Track
+## Update Modes & Token Usage
 
-Copy-paste one of these into your Claude Code session:
+Control how often the agent updates the tracking file:
 
-**New project:**
-> Read `claude-session-track.md` and follow its instructions. This is a new project — use `tracking_start: "full"`. Use **manual** mode.
+| Mode | Behavior | Token Cost |
+|------|----------|------------|
+| **auto** | Updates after every prompt/response cycle. One activity log entry per interaction — most granular history. | Highest — writes on every turn, adds up in long sessions. |
+| **manual** | Updates only when you ask (e.g. "update tracker"). Batches recent work into summary entries. | Medium — **recommended default**. You control when tokens are spent. |
+| **budget** | Updates twice per session — start and end only. No intermediate writes. | Lowest — best for tight budgets, less granular tracking. |
 
-**Existing project (first time tracking):**
-> Read `claude-session-track.md` and follow its instructions. This project has existing work — use `tracking_start: "mid_project"`. Use **manual** mode.
-
-**Continuing (file already exists):**
-> Read `claude-session-track.md` and follow its instructions. The tracking file already exists at `.claude/sessions/session-tracker.md` — read it and continue from where the last session left off. Use **manual** mode.
+Every time the agent writes to the session file it consumes tokens for reading the current state, deciding what to add, and producing the updated content. **manual** is the recommended default. Switch to **budget** for minimal overhead, or **auto** for a detailed per-interaction audit trail.
 
 ## Features
+
+### Notes — User & Agent
+
+The dashboard has a unified notes timeline that shows both user and agent notes, each with a distinct badge:
+
+- **User notes** (`notes.md`) — leave notes from the dashboard for the next session. The agent reads these but never modifies them.
+- **Agent notes** (`agent-notes.md`) — agents leave notes for you and future sessions (decisions, warnings, handoff context, questions).
+
+Both are displayed together in chronological order with **[user]** and **[agent]** badges. Agent notes are visually distinguished with a purple accent.
 
 ### Three Views
 
@@ -77,38 +101,34 @@ Copy-paste one of these into your Claude Code session:
 | **List** | Compact table with priority, status, tasks, timestamps |
 | **Timeline** | Horizontal bars showing project time spans, color-coded by status |
 
-Switch between views using the toggle buttons in the toolbar.
-
 ### Search & Filter
 
 - **Search bar** — instantly filter by project title, tags, branch, or repository
 - **Status filters** — All, In Progress, Completed, Blocked, Failed
-- All filters work across every view
 
 ### Priority
 
 Set priority per project from the detail view: **critical** (`!!!`), **high** (`!!`), **medium** (`!`), **low** (`~`), or **none**.
 
-Projects auto-sort by priority first, then by last updated. Priority badges are visible on cards, list rows, and timeline labels.
+Projects auto-sort by priority first, then by last updated.
 
-### User Notes
+### Display Settings
 
-Leave notes from the dashboard for the next session to pick up. Notes are saved as `notes.md` alongside `session-tracker.md`.
+Adjust the dashboard layout without opening the full settings modal using the floating gear button (bottom-right corner):
 
-Use it for:
-- Priority changes ("Focus on payments first")
-- Context the agent needs ("New Stripe API key in #dev-channel")
-- Decisions ("Don't refactor auth yet, waiting on design review")
+- **Max Width** — full width or fixed (e.g. 1400px)
+- **Row / Column Gap** — spacing between cards
+- **Font Scale** — 70% to 150%
 
-Agents read `notes.md` at session start and incorporate the context. Notes are append-only and timestamped.
+All inputs use a number + unit dropdown (px, %, rem, em, vw). Settings persist across page refreshes.
 
 ### Full-Screen Detail View
 
 Click any project to open a full-screen detail page with:
 - Progress ring with glow effect
-- Remaining tasks shown at the top (not buried at the bottom)
+- Remaining tasks shown at the top
 - Handoff notes prominently displayed
-- User notes with comment thread
+- Notes timeline (user + agent) with comment thread
 - Session history chips
 - Activity timeline with session boundary markers
 - Full rendered markdown content
@@ -128,49 +148,19 @@ Multiple sessions update the same file. The dashboard tracks:
 - Each card shows which project it belongs to
 - **Auto-discover** projects by scanning a root folder for `CLAUDE.md`
 - Add/remove projects anytime via Settings
-- Configurable layout max-width (100% full width or fixed like 1400px)
-
-### Update Modes
-
-Control how often the agent updates the tracking file:
-
-| Mode | Behavior | Token Cost |
-|------|----------|------------|
-| **auto** | Updates the tracking file after every prompt/response cycle. One activity log entry per interaction, giving the most granular history. | Highest — the agent writes to the file on every turn, which adds up quickly in long sessions. |
-| **manual** | Updates only when the user explicitly asks (e.g. "update tracker"). Recent work is batched into summary entries rather than logged one-by-one. | Medium — recommended default. You stay in control of when tokens are spent on tracking. |
-| **budget** | Updates only twice per session — once at the start and once at the end. Intermediate work is not written to the file. | Lowest — best for tight token budgets, but gives less granular tracking. |
-
-Each update mode represents a trade-off between tracking granularity and token usage. Every time the agent writes to the session file it consumes tokens for reading the current state, deciding what to add, and producing the updated content. **auto** mode can noticeably increase total token consumption in long sessions, so **manual** is the recommended default for most users. Switch to **budget** if you want minimal overhead, or to **auto** if you need a detailed, per-interaction audit trail.
 
 ### New vs Existing Projects
 
 | `tracking_start` | Behavior |
 |-------------------|----------|
 | `full` | Tracks everything from the beginning — complete activity log |
-| `mid_project` | Agent does a quick scan, writes a Project Summary of prior work, then logs normally. No token-expensive deep history reconstruction. |
+| `mid_project` | Agent does a quick scan, writes a Project Summary of prior work, then logs normally. |
 
 The dashboard visually distinguishes these with badges: **full** (green) vs **mid-project** (yellow).
 
 ### Live Reload
 
 The dashboard auto-updates when session files change — no manual refresh needed. Powered by Server-Sent Events watching all configured folders.
-
-## Project Structure
-
-```
-claude-session-tracker/
-├── server/
-│   ├── index.js              // Express server, API, SSE, file watcher
-│   └── config.js             // Config load/save/validate
-├── public/
-│   ├── index.html            // Dashboard HTML + setup wizard
-│   ├── app.js                // Frontend logic
-│   └── styles.css            // WZG-inspired dark theme
-├── claude-session-track.md   // Agent instruction file (share this)
-├── SESSION_TEMPLATE.md       // Quick reference template
-├── tracker-config.json       // Generated on first run (gitignored)
-└── package.json
-```
 
 ## Configuration
 
@@ -195,7 +185,7 @@ Generated on first run. Edit directly or use the Settings UI.
 }
 ```
 
-All display settings (max width, row gap, column gap, font scale) are persisted to this file and restored on page refresh.
+All display settings are persisted to this file and restored on page refresh.
 
 ### Environment Variables
 
@@ -242,9 +232,26 @@ See [`claude-session-track.md`](claude-session-track.md) for the complete agent 
 | `/api/config/folders` | POST | Add a watch folder |
 | `/api/config/folders` | DELETE | Remove a watch folder |
 | `/api/discover?root=` | GET | Scan folder for projects with CLAUDE.md |
-| `/api/notes?source=` | GET | Get user notes for a project |
+| `/api/notes?source=` | GET | Get merged user + agent notes for a project |
 | `/api/notes?source=` | POST | Add a user note |
 | `/api/events` | GET | SSE stream for live reload |
+
+## Project Structure
+
+```
+claude-session-tracker/
+├── server/
+│   ├── index.js              // Express server, API, SSE, file watcher
+│   └── config.js             // Config load/save/validate
+├── public/
+│   ├── index.html            // Dashboard HTML + setup wizard
+│   ├── app.js                // Frontend logic
+│   └── styles.css            // WZG-inspired dark theme
+├── claude-session-track.md   // Agent instruction file (share this)
+├── SESSION_TEMPLATE.md       // Quick reference template
+├── tracker-config.json       // Generated on first run (gitignored)
+└── package.json
+```
 
 ## Development
 
