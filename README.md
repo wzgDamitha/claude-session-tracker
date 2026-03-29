@@ -136,9 +136,11 @@ Control how often the agent updates the tracking file:
 
 | Mode | Behavior | Token Cost |
 |------|----------|------------|
-| **auto** | Updates after every prompt/response | Higher |
-| **manual** | Updates only when you ask | Medium |
-| **budget** | Updates at start + end only | Lowest |
+| **auto** | Updates the tracking file after every prompt/response cycle. One activity log entry per interaction, giving the most granular history. | Highest — the agent writes to the file on every turn, which adds up quickly in long sessions. |
+| **manual** | Updates only when the user explicitly asks (e.g. "update tracker"). Recent work is batched into summary entries rather than logged one-by-one. | Medium — recommended default. You stay in control of when tokens are spent on tracking. |
+| **budget** | Updates only twice per session — once at the start and once at the end. Intermediate work is not written to the file. | Lowest — best for tight token budgets, but gives less granular tracking. |
+
+Each update mode represents a trade-off between tracking granularity and token usage. Every time the agent writes to the session file it consumes tokens for reading the current state, deciding what to add, and producing the updated content. **auto** mode can noticeably increase total token consumption in long sessions, so **manual** is the recommended default for most users. Switch to **budget** if you want minimal overhead, or to **auto** if you need a detailed, per-interaction audit trail.
 
 ### New vs Existing Projects
 
