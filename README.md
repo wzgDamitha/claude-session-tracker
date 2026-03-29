@@ -30,6 +30,12 @@ Copy-paste one of these into your Claude Code session:
 **Continuing (file already exists):**
 > Read `claude-session-track.md` and follow its instructions. The tracking file already exists at `.claude/sessions/session-tracker.md` — read it and continue from where the last session left off. Use **manual** mode.
 
+**Generate tech stack file:**
+> Read `claude-session-track.md` and create the tech stack file at `.claude/sessions/tech-stack.md` for this project.
+
+**Leave an agent note:**
+> Read `claude-session-track.md` and add a note to `.claude/sessions/agent-notes.md` summarizing what was done this session.
+
 ## How It Works
 
 ```
