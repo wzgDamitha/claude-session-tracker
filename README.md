@@ -252,6 +252,8 @@ Sections: Objective, Project Summary (mid-project only), Tasks, Changes Made, Ke
 
 See [`claude-session-track.md`](claude-session-track.md) for the agent instruction specification.
 
+See [`USE_CASES.md`](USE_CASES.md) for detailed use cases and workflows.
+
 ## API Endpoints
 
 | Endpoint | Method | Description |
