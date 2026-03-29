@@ -71,7 +71,7 @@ On first launch, choose one of two modes:
 | **Individual Folders** | Each project has its own `.claude/sessions/` folder (recommended) |
 
 For **Individual Folders**, you can either:
-- **Auto-discover** — add one or more root folders and the app scans for projects with `CLAUDE.md`
+- **Auto-discover** — add one or more root folders and the app scans recursively (up to 3 levels deep) for projects with `CLAUDE.md` or `.claude/sessions`. Nested projects (e.g. a monorepo with sub-projects) are detected and listed with their relative paths so you can pick which ones to track.
 - **Add manually** — paste specific folder paths
 
 Config is saved to `tracker-config.json` (gitignored, portable between machines).
@@ -97,7 +97,7 @@ The dashboard has a unified notes timeline that shows both user and agent notes,
 - **User notes** (`notes.md`) — leave notes from the dashboard for the next session. The agent reads these but never modifies them.
 - **Agent notes** (`agent-notes.md`) — agents leave notes for you and future sessions (decisions, warnings, handoff context, questions).
 
-Both are displayed together in chronological order with **[user]** and **[agent]** badges.
+Both are displayed together in chronological order with **[user]** and **[agent]** badges. Use the **All / User / Agent** tabs to filter.
 
 ### Three Views
 
@@ -121,6 +121,7 @@ Each card displays tags so you can understand the state of a project at a glance
 | **Session Count** | `3 sess` | Number of Claude sessions that have worked on this project |
 | **Branch** | `● master`, `● feature/auth` | The git branch the current session is working on (e.g. `main`, `master`, `feature/auth`) |
 | **Updated** | `2 hours ago` | Time since the tracking file was last modified |
+| **Version Control** | `remote`, `local`, `no git` | Whether the project uses git with a remote, git locally only, or no git. Shown with an icon. |
 | **Tags** | `backend`, `auth` | Custom keywords set by the agent for categorization. Used in search. |
 
 #### Color Meaning
@@ -149,6 +150,8 @@ Click any project to open a full detail page. In addition to the card tags above
 | **Progress ring** | Visual progress indicator (0–100%) |
 | **Pending tasks** | Remaining unchecked tasks from the tracking file |
 | **Handoff notes** | Notes the agent left for the next session to continue from |
+| **Tech stack** | Collapsible section showing the project's tech stack, structure, and recent changes (from `tech-stack.md`) |
+| **Notes filter tabs** | Toggle between All, User, or Agent notes |
 
 ### Search & Filter
 
@@ -165,9 +168,10 @@ Projects auto-sort by priority first, then by last updated.
 
 Adjust the dashboard layout using the floating gear button (bottom-right corner):
 
-- **Max Width** — full width or fixed (e.g. 1400px)
+- **Max Width** — dashboard max width, full width or fixed (e.g. 1400px)
+- **Detail Max Width** — detail view max width (default 900px)
 - **Row / Column Gap** — spacing between cards
-- **Font Scale** — 70% to 150%
+- **Font Scale** — 70% to 150%, applies to all views including detail
 
 All inputs use a number + unit dropdown (px, %, rem, em, vw). Settings persist across page refreshes.
 
@@ -181,7 +185,7 @@ Multiple sessions update the same file. The dashboard tracks which sessions cont
 
 - Watch multiple project folders simultaneously
 - Each card shows which project it belongs to
-- **Auto-discover** projects by scanning multiple root folders for `CLAUDE.md`
+- **Auto-discover** projects by scanning multiple root folders for `CLAUDE.md` (recursive, finds nested projects)
 - Add/remove projects anytime via Settings
 
 ### New vs Existing Projects
@@ -211,6 +215,7 @@ Generated on first run. Edit directly or use the Settings UI.
   ],
   "discoverRoots": ["C:\\Projects", "D:\\Work"],
   "maxWidth": "100%",
+  "detailMaxWidth": "900px",
   "rowGap": "0px",
   "columnGap": "0px",
   "fontScale": "100",
