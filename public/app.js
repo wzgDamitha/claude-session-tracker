@@ -1064,7 +1064,7 @@ function applyDisplaySettings(cfg) {
   root.setProperty('--grid-row-gap', cfg.rowGap || '0px');
   root.setProperty('--grid-column-gap', cfg.columnGap || '0px');
   root.setProperty('--font-scale', (parseInt(cfg.fontScale, 10) || 100) / 100);
-  document.getElementById('app').style.zoom = (parseInt(cfg.fontScale, 10) || 100) / 100;
+  document.body.style.zoom = (parseInt(cfg.fontScale, 10) || 100) / 100;
 }
 
 function escapeHtml(str) {
