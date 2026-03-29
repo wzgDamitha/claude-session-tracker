@@ -79,7 +79,7 @@ app.get('/api/config', (req, res) => {
 });
 
 app.post('/api/config', (req, res) => {
-  const { mode, sharedFolder, watchFolders, discoverRoots, discoverRoot, port, maxWidth, rowGap, columnGap, fontScale } = req.body;
+  const { mode, sharedFolder, watchFolders, discoverRoots, discoverRoot, port, maxWidth, rowGap, columnGap, fontScale, detailMaxWidth } = req.body;
 
   // Allow reset (mode: null)
   if (mode === null) {
@@ -137,6 +137,7 @@ app.post('/api/config', (req, res) => {
     rowGap: rowGap || '0px',
     columnGap: columnGap || '0px',
     fontScale: fontScale || '100',
+    detailMaxWidth: detailMaxWidth || '900px',
   });
 
   buildWatcher();
@@ -440,6 +441,40 @@ app.patch('/api/sessions/:file', (req, res) => {
   }
 
   res.status(404).json({ error: 'Session not found' });
+});
+
+// --- Tech Stack API ---
+app.get('/api/tech-stack', (req, res) => {
+  const sourceFolder = req.query.source;
+  if (!isValidSourceFolder(sourceFolder)) {
+    return res.status(400).json({ error: 'Invalid source folder' });
+  }
+
+  const techPath = path.join(path.resolve(sourceFolder), 'tech-stack.md');
+  if (!fs.existsSync(techPath)) {
+    return res.json({ exists: false, content: '', sections: {} });
+  }
+
+  try {
+    const raw = fs.readFileSync(techPath, 'utf-8');
+    // Parse sections
+    const sections = {};
+    const sectionRegex = /^## (.+)$/gm;
+    let m;
+    const positions = [];
+    while ((m = sectionRegex.exec(raw)) !== null) {
+      positions.push({ name: m[1], start: m.index + m[0].length });
+    }
+    for (let i = 0; i < positions.length; i++) {
+      const end = i + 1 < positions.length
+        ? positions[i + 1].start - positions[i + 1].name.length - 3
+        : raw.length;
+      sections[positions[i].name] = raw.slice(positions[i].start, end).trim();
+    }
+    res.json({ exists: true, content: raw, sections });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // --- Notes API ---

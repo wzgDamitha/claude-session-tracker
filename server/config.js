@@ -12,6 +12,7 @@ const DEFAULT_CONFIG = {
   rowGap: '0px',
   columnGap: '0px',
   fontScale: '100',
+  detailMaxWidth: '900px',
   port: 3890,
 };
 

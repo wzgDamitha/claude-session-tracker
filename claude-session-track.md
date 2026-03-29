@@ -80,6 +80,7 @@ Use this structure when creating `session-tracker.md` for the first time:
 ---
 title: "Project name or description"
 repository: "owner/repo-name"
+version_control: "git_remote"
 status: "in_progress"
 tracking_start: "full"
 created_at: "2026-03-28T10:00:00Z"
@@ -130,6 +131,7 @@ Next session should pick up the login endpoint work.
 ---
 title: "E-commerce Platform"
 repository: "owner/repo-name"
+version_control: "git_remote"
 status: "in_progress"
 tracking_start: "mid_project"
 created_at: "2026-03-28T14:00:00Z"
@@ -247,6 +249,7 @@ When `session-tracker.md` already exists, **read it first**, then update these p
 |-------------------|----------|------------------------------------------------------------------|
 | `title`           | Yes      | Project name or description (under 60 chars)                     |
 | `repository`      | Yes      | Repository in `owner/repo` format                                |
+| `version_control`  | No       | `git_remote` · `git_local` · `none` — auto-detected by agent    |
 | `status`          | Yes      | `not_started` · `in_progress` · `blocked` · `completed` · `failed` |
 | `tracking_start`  | Yes      | `full` · `mid_project` — set once, never change                  |
 | `created_at`      | Yes      | ISO 8601 — when tracking file was first created                  |
@@ -342,6 +345,55 @@ Optional details about what was done, found, or decided.
 
 ---
 
+## 8. Tech Stack File (`tech-stack.md`)
+
+When the user requests it, create or update `tech-stack.md` in the same `.claude/sessions/` folder. This file gives the dashboard (and future sessions) a quick overview of the project's technical landscape.
+
+**Format:**
+```markdown
+# Tech Stack
+
+> Last updated: 2026-03-28 14:00:00
+
+## Stack
+- **Language:** TypeScript
+- **Runtime:** Node.js 20
+- **Framework:** Express.js
+- **Database:** PostgreSQL + Prisma ORM
+- **Frontend:** React 19, Tailwind CSS
+- **Auth:** JWT (RS256)
+- **Testing:** Vitest
+- **Deployment:** Docker, AWS ECS
+
+## Project Structure
+```
+src/
+├── routes/       # API endpoints
+├── services/     # Business logic
+├── models/       # Prisma models
+├── middleware/    # Auth, validation
+└── utils/        # Shared helpers
+```
+
+## Core Features
+- User authentication (JWT)
+- Product catalog with search
+- Shopping cart and checkout
+
+## Recent Changes
+### [2026-03-28 14:00:00] Added PostgreSQL
+Migrated from SQLite to PostgreSQL for production readiness.
+```
+
+**Rules:**
+- **Only create when the user asks** — don't auto-create this file
+- **Keep it concise** — this is a quick reference, not documentation
+- **Update the "Recent Changes" section** when a decision affects the stack or structure (e.g. adding a database, switching frameworks, major refactors)
+- **For mid-project tracking**, write down what you can determine from a quick scan — don't deep-dive
+- **Always update `Last updated` timestamp** when editing
+
+---
+
 ## 10. Rules
 
 1. **One file per project: `session-tracker.md`** — all sessions share this file
@@ -361,6 +413,7 @@ Optional details about what was done, found, or decided.
 15. **Read `notes.md` at session start** if it exists — it contains user instructions and context
 16. **Never modify `notes.md`** — it is user-maintained from the dashboard
 17. **Write agent notes to `agent-notes.md`** — use this to communicate with the user or the next session
+18. **Set `version_control`** — check if the project has git (`git rev-parse --is-inside-work-tree`), and if it has a remote (`git remote -v`). Set to `git_remote` if remotes exist, `git_local` if git but no remote, `none` if no git.
 
 ### Agent Notes (`agent-notes.md`)
 

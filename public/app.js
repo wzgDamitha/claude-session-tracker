@@ -384,6 +384,9 @@ function cardHTML(s) {
   // Badges
   const tags = (s.tags || []).map(t => `<span class="tag">${escapeHtml(t)}</span>`).join('');
   const sourceLabel = s.sourceName ? `<span class="source-tag">${escapeHtml(s.sourceName)}</span>` : '';
+  const vcLabel = s.version_control === 'git_remote' ? '<span class="vc-badge vc-remote">git:remote</span>'
+    : s.version_control === 'git_local' ? '<span class="vc-badge vc-local">git:local</span>'
+    : s.version_control === 'none' ? '<span class="vc-badge vc-none">no git</span>' : '';
   const modeLabel = s.update_mode ? `<span class="update-mode-tag">${escapeHtml(s.update_mode)}</span>` : '';
   const trackingLabel = s.tracking_start === 'mid_project' ? '<span class="tracking-badge tracking-mid">mid-project</span>'
     : s.tracking_start === 'full' ? '<span class="tracking-badge tracking-full">full</span>' : '';
@@ -438,7 +441,7 @@ function cardHTML(s) {
         <span class="status-badge status-${status}">${status.replace('_', ' ')}</span>
       </div>
       <div class="card-meta">
-        ${sourceLabel}${trackingLabel}${sessionCountLabel}${modeLabel}
+        ${sourceLabel}${vcLabel}${trackingLabel}${sessionCountLabel}${modeLabel}
         ${s.current_branch || s.branch ? `<span>&#9702; ${escapeHtml(s.current_branch || s.branch)}</span>` : ''}
         ${s.updated_at ? `<span>${timeAgo(s.updated_at)} ago</span>` : ''}
       </div>
@@ -653,10 +656,20 @@ function openDetail(s) {
         ${['none','low','medium','high','critical'].map(p => `<option value="${p}" ${(s.priority||'none')===p?'selected':''}>${p}</option>`).join('')}
       </select>
       ${s.sourceName ? `<span class="source-tag">${escapeHtml(s.sourceName)}</span>` : ''}
+      ${s.version_control === 'git_remote' ? '<span class="vc-badge vc-remote">git:remote</span>'
+        : s.version_control === 'git_local' ? '<span class="vc-badge vc-local">git:local</span>'
+        : s.version_control === 'none' ? '<span class="vc-badge vc-none">no git</span>' : ''}
       ${s.current_session ? `<span>current: ${escapeHtml(s.current_session)}</span>` : ''}
       ${s.current_branch || s.branch ? `<span>&#9702; ${escapeHtml(s.current_branch || s.branch)}</span>` : ''}
       ${s.created_at ? `<span>since ${new Date(s.created_at).toLocaleDateString()}</span>` : ''}
       ${s.updated_at ? `<span>updated ${new Date(s.updated_at).toLocaleString()}</span>` : ''}
+    </div>
+    <div class="tech-stack-section" id="tech-stack-section" style="display:none">
+      <div class="tech-stack-header" id="tech-stack-toggle">
+        <span class="user-notes-title">// Tech Stack</span>
+        <span class="tech-stack-chevron" id="tech-stack-chevron">&#9654;</span>
+      </div>
+      <div class="tech-stack-content" id="tech-stack-content"></div>
     </div>
     ${midProjectNotice}
     ${sessionHistoryHTML}
@@ -706,6 +719,9 @@ function openDetail(s) {
     await fetchSessions();
   });
 
+  // Load tech stack
+  loadTechStack(s.sourceFolder);
+
   // Load notes
   loadNotes(s.sourceFolder);
 
@@ -716,6 +732,53 @@ function openDetail(s) {
   notesInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) postNote(s.sourceFolder);
   });
+}
+
+function simpleMarkdown(text) {
+  return text
+    .replace(/^### (.+)$/gm, '<h4 style="margin-top:12px;margin-bottom:4px;font-family:var(--font-mono);font-size:11px;color:var(--accent);text-transform:uppercase;letter-spacing:0.08em">$1</h4>')
+    .replace(/^- \*\*(.+?):\*\* (.+)$/gm, '<div class="tech-item"><span class="tech-label">$1</span> <span class="tech-value">$2</span></div>')
+    .replace(/^- (.+)$/gm, '<div class="tech-item">$1</div>')
+    .replace(/```([\s\S]*?)```/g, '<pre class="tech-tree">$1</pre>')
+    .replace(/\n\n/g, '<br>');
+}
+
+async function loadTechStack(sourceFolder) {
+  const section = document.getElementById('tech-stack-section');
+  const content = document.getElementById('tech-stack-content');
+  const chevron = document.getElementById('tech-stack-chevron');
+  const toggle = document.getElementById('tech-stack-toggle');
+  try {
+    const res = await fetch(`/api/tech-stack?source=${encodeURIComponent(sourceFolder)}`);
+    const data = await res.json();
+    if (!data.exists) return;
+    section.style.display = 'block';
+
+    // Build display from sections
+    let html = '';
+    if (data.sections['Stack']) {
+      html += `<div class="tech-stack-items">${simpleMarkdown(data.sections['Stack'])}</div>`;
+    }
+    if (data.sections['Project Structure']) {
+      html += `<div class="tech-stack-items"><h4>Project Structure</h4>${simpleMarkdown(data.sections['Project Structure'])}</div>`;
+    }
+    if (data.sections['Core Features']) {
+      html += `<div class="tech-stack-items"><h4>Core Features</h4>${simpleMarkdown(data.sections['Core Features'])}</div>`;
+    }
+    if (data.sections['Recent Changes']) {
+      html += `<div class="tech-stack-items"><h4>Recent Changes</h4>${simpleMarkdown(data.sections['Recent Changes'])}</div>`;
+    }
+    content.innerHTML = html;
+
+    // Toggle expand/collapse
+    toggle.addEventListener('click', () => {
+      const isOpen = content.style.display !== 'none';
+      content.style.display = isOpen ? 'none' : 'block';
+      chevron.innerHTML = isOpen ? '&#9654;' : '&#9660;';
+    });
+  } catch (err) {
+    console.error('Failed to load tech stack:', err);
+  }
 }
 
 function closeDetail() {
@@ -801,6 +864,8 @@ function renderFloatingSettings() {
   const cg = parseCSSValue(currentConfig.columnGap || '0px');
   if (!cg.unit) cg.unit = 'px';
   const fontScale = currentConfig.fontScale || '100';
+  const dw = parseCSSValue(currentConfig.detailMaxWidth || '900px');
+  if (!dw.unit) dw.unit = 'px';
 
   const unitOptions = (selected) => ['%', 'px', 'rem', 'em', 'vw'].map(u =>
     `<option value="${u}"${u === selected ? ' selected' : ''}>${u}</option>`
@@ -832,6 +897,13 @@ function renderFloatingSettings() {
       <label>Font Scale — <span id="float-font-scale-value">${escapeHtml(fontScale)}%</span></label>
       <input type="range" id="float-font-scale" min="70" max="150" step="5" value="${escapeHtml(fontScale)}" style="width:100%;accent-color:var(--accent)">
     </div>
+    <div class="floating-field">
+      <label>Detail Max Width</label>
+      <div class="floating-input-group">
+        <input type="number" id="float-detail-width-val" value="${escapeHtml(dw.value)}" min="0">
+        <select id="float-detail-width-unit">${unitOptions(dw.unit)}</select>
+      </div>
+    </div>
     <button class="floating-apply-btn" id="float-apply-btn">Apply</button>
   `;
 
@@ -846,12 +918,13 @@ function renderFloatingSettings() {
     const rowGap = document.getElementById('float-row-gap-val').value + document.getElementById('float-row-gap-unit').value;
     const columnGap = document.getElementById('float-col-gap-val').value + document.getElementById('float-col-gap-unit').value;
     const fs = floatFontSlider.value || '100';
+    const detailMaxWidth = document.getElementById('float-detail-width-val').value + document.getElementById('float-detail-width-unit').value;
     await fetch('/api/config', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...currentConfig, maxWidth, rowGap, columnGap, fontScale: fs }),
+      body: JSON.stringify({ ...currentConfig, maxWidth, rowGap, columnGap, fontScale: fs, detailMaxWidth }),
     });
-    applyDisplaySettings({ maxWidth, rowGap, columnGap, fontScale: fs });
+    applyDisplaySettings({ maxWidth, rowGap, columnGap, fontScale: fs, detailMaxWidth });
     await refreshConfig();
   });
 }
@@ -922,6 +995,13 @@ function renderSettings() {
         <input type="range" id="settings-font-scale" min="70" max="150" step="5" value="${escapeHtml(currentConfig.fontScale || '100')}" style="flex:1;accent-color:var(--accent)">
       </div>
       <p class="wizard-hint">Scale all text sizes (70%&ndash;150%).</p>
+
+      <label class="form-label" style="font-family:var(--font-mono);font-size:10px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;margin-top:16px;display:block">Detail Max Width</label>
+      <div class="floating-input-group" style="margin-bottom:4px">
+        <input type="number" id="settings-detail-width-val" value="${escapeHtml(parseCSSValue(currentConfig.detailMaxWidth || '900px').value)}" min="0">
+        <select id="settings-detail-width-unit">${['%','px','rem','em','vw'].map(u => '<option value="' + u + '"' + (parseCSSValue(currentConfig.detailMaxWidth || '900px').unit === u || (!parseCSSValue(currentConfig.detailMaxWidth || '900px').unit && u === 'px') ? ' selected' : '') + '>' + u + '</option>').join('')}</select>
+      </div>
+      <p class="wizard-hint">Max width for the detail view. Default is 900px.</p>
 
       <button class="wizard-add-btn" id="settings-save-display" style="margin-top:16px">Apply</button>
     </div>
@@ -1038,12 +1118,13 @@ function renderSettings() {
     const rowGap = (document.getElementById('settings-row-gap-val').value || '0') + (document.getElementById('settings-row-gap-unit').value || 'px');
     const columnGap = (document.getElementById('settings-column-gap-val').value || '0') + (document.getElementById('settings-column-gap-unit').value || 'px');
     const fontScale = fontScaleSlider.value || '100';
+    const detailMaxWidth = (document.getElementById('settings-detail-width-val').value || '900') + (document.getElementById('settings-detail-width-unit').value || 'px');
     await fetch('/api/config', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...currentConfig, maxWidth, rowGap, columnGap, fontScale }),
+      body: JSON.stringify({ ...currentConfig, maxWidth, rowGap, columnGap, fontScale, detailMaxWidth }),
     });
-    applyDisplaySettings({ maxWidth, rowGap, columnGap, fontScale });
+    applyDisplaySettings({ maxWidth, rowGap, columnGap, fontScale, detailMaxWidth });
     await refreshConfig();
   });
 
@@ -1063,6 +1144,7 @@ function applyDisplaySettings(cfg) {
   root.setProperty('--layout-max-width', cfg.maxWidth || '100%');
   root.setProperty('--grid-row-gap', cfg.rowGap || '0px');
   root.setProperty('--grid-column-gap', cfg.columnGap || '0px');
+  root.setProperty('--detail-max-width', cfg.detailMaxWidth || '900px');
   root.setProperty('--font-scale', (parseInt(cfg.fontScale, 10) || 100) / 100);
   document.body.style.zoom = (parseInt(cfg.fontScale, 10) || 100) / 100;
 }
