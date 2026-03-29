@@ -1252,6 +1252,34 @@ main {
   margin-bottom: 4px;
 }
 
+.note-badge {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 1px 6px;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+.note-badge-user {
+  color: var(--accent);
+  border: 1px solid var(--accent-border);
+  background: var(--accent-dim);
+}
+
+.note-badge-agent {
+  color: var(--purple, #a78bfa);
+  border: 1px solid rgba(167, 139, 250, 0.2);
+  background: rgba(167, 139, 250, 0.06);
+}
+
+.agent-note-entry {
+  border-left: 2px solid var(--purple, #a78bfa);
+}
+
 .user-note-body {
   font-size: 14px;
   color: var(--text-secondary);

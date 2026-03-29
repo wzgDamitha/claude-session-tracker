@@ -27,9 +27,11 @@ If the `.claude/sessions/` directory does not exist, **create it**.
 2. **If it exists** — read it, then update it (see Section 5: Continuing an Existing File)
 3. **If it doesn't exist** — create it fresh (see Section 4: File Format)
 4. **Check if `notes.md` exists** in the same folder — if it does, **read it**. These are notes and instructions left by the user from the dashboard. Incorporate any relevant context into your work.
+5. **Check if `agent-notes.md` exists** — if it does, read it for notes left by previous agent sessions.
 
 **NEVER create a new file if one already exists. ALWAYS update the existing file.**
 **NEVER modify `notes.md`** — it is written by the user, not by agents.
+**Use `agent-notes.md`** to leave notes for the user or the next session (see Agent Notes below).
 
 ---
 
@@ -358,6 +360,30 @@ Optional details about what was done, found, or decided.
 14. **Don't over-read for mid-project summaries** — quick scan only
 15. **Read `notes.md` at session start** if it exists — it contains user instructions and context
 16. **Never modify `notes.md`** — it is user-maintained from the dashboard
+17. **Write agent notes to `agent-notes.md`** — use this to communicate with the user or the next session
+
+### Agent Notes (`agent-notes.md`)
+
+Agents can leave notes for the user and future sessions by writing to `agent-notes.md` in the same `.claude/sessions/` folder. This keeps agent notes separate from user notes (`notes.md`).
+
+**Format** — append entries using this exact format:
+```markdown
+### [YYYY-MM-DD HH:MM:SS] Agent
+Your note here. Can be multiple lines.
+
+```
+
+**When to write agent notes:**
+- Decisions that need user review ("Chose PostgreSQL over SQLite because...")
+- Warnings or blockers ("API rate limit is close, consider upgrading plan")
+- Handoff context for the next session ("Auth module is half-done, start with `src/auth/`")
+- Questions for the user ("Should we add rate limiting to the public API?")
+
+**Rules:**
+- **NEVER modify `notes.md`** — that file belongs to the user
+- **Always append** to `agent-notes.md` — never overwrite previous entries
+- **Use accurate timestamps** — use the actual current time
+- **Create the file** if it doesn't exist, with the header `# Agent Notes` followed by a blank line before the first entry
 
 ---
 

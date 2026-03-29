@@ -643,7 +643,7 @@ function openDetail(s) {
     ${notesTopHTML}
     <div class="user-notes" id="user-notes" data-source="${escapeHtml(s.sourceFolder)}">
       <div class="user-notes-header">
-        <span class="user-notes-title">// User Notes</span>
+        <span class="user-notes-title">// Notes</span>
         <span class="user-notes-count" id="notes-count"></span>
       </div>
       <div class="user-notes-entries" id="notes-entries">
@@ -699,12 +699,20 @@ async function loadNotes(sourceFolder) {
       countEl.textContent = '';
     } else {
       countEl.textContent = `${data.entries.length} note${data.entries.length > 1 ? 's' : ''}`;
-      entriesEl.innerHTML = data.entries.map(e => `
-        <div class="user-note-entry">
-          <div class="user-note-time">${escapeHtml(e.timestamp)}</div>
-          <div class="user-note-body">${escapeHtml(e.body)}</div>
-        </div>
-      `).join('');
+      entriesEl.innerHTML = data.entries.map(e => {
+        const isAgent = e.source === 'agent';
+        const badgeClass = isAgent ? 'note-badge-agent' : 'note-badge-user';
+        const badgeLabel = isAgent ? 'agent' : 'user';
+        return `
+          <div class="user-note-entry ${isAgent ? 'agent-note-entry' : ''}">
+            <div class="user-note-time">
+              <span class="note-badge ${badgeClass}">${badgeLabel}</span>
+              ${escapeHtml(e.timestamp)}
+            </div>
+            <div class="user-note-body">${escapeHtml(e.body)}</div>
+          </div>
+        `;
+      }).join('');
       entriesEl.scrollTop = entriesEl.scrollHeight;
     }
   } catch (err) {

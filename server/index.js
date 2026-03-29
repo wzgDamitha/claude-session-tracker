@@ -463,24 +463,28 @@ function parseNotes(content) {
   return entries;
 }
 
+function readNotesFile(filePath) {
+  if (!fs.existsSync(filePath)) return [];
+  try {
+    return parseNotes(fs.readFileSync(filePath, 'utf-8'));
+  } catch {
+    return [];
+  }
+}
+
 app.get('/api/notes', (req, res) => {
   const sourceFolder = req.query.source;
   if (!isValidSourceFolder(sourceFolder)) {
     return res.status(400).json({ error: 'Invalid source folder' });
   }
 
-  const notesPath = path.join(path.resolve(sourceFolder), 'notes.md');
-  if (!fs.existsSync(notesPath)) {
-    return res.json({ entries: [], raw: '' });
-  }
+  const resolved = path.resolve(sourceFolder);
+  const userEntries = readNotesFile(path.join(resolved, 'notes.md')).map(e => ({ ...e, source: 'user' }));
+  const agentEntries = readNotesFile(path.join(resolved, 'agent-notes.md')).map(e => ({ ...e, source: 'agent' }));
 
-  try {
-    const raw = fs.readFileSync(notesPath, 'utf-8');
-    const entries = parseNotes(raw);
-    res.json({ entries, raw });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+  // Merge and sort by timestamp
+  const entries = [...userEntries, ...agentEntries].sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+  res.json({ entries });
 });
 
 app.post('/api/notes', (req, res) => {
@@ -513,9 +517,11 @@ app.post('/api/notes', (req, res) => {
     fs.appendFileSync(notesPath, entry, 'utf-8');
   }
 
-  const raw = fs.readFileSync(notesPath, 'utf-8');
-  const entries = parseNotes(raw);
-  res.json({ success: true, entries, raw });
+  // Return merged timeline
+  const userEntries = readNotesFile(notesPath).map(e => ({ ...e, source: 'user' }));
+  const agentEntries = readNotesFile(path.join(resolved, 'agent-notes.md')).map(e => ({ ...e, source: 'agent' }));
+  const entries = [...userEntries, ...agentEntries].sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+  res.json({ success: true, entries });
 });
 
 app.listen(PORT, () => {
