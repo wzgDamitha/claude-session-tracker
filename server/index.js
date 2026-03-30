@@ -496,6 +496,128 @@ app.get('/api/tech-stack', (req, res) => {
   }
 });
 
+// --- Todos API ---
+function readTodos(sourceFolder) {
+  const todosPath = path.join(path.resolve(sourceFolder), 'todos.json');
+  if (!fs.existsSync(todosPath)) return [];
+  try {
+    const data = JSON.parse(fs.readFileSync(todosPath, 'utf-8'));
+    return data.todos || [];
+  } catch { return []; }
+}
+
+function writeTodos(sourceFolder, todos) {
+  const resolved = path.resolve(sourceFolder);
+  const todosPath = path.join(resolved, 'todos.json');
+  if (!fs.existsSync(resolved)) fs.mkdirSync(resolved, { recursive: true });
+  fs.writeFileSync(todosPath, JSON.stringify({ todos }, null, 2), 'utf-8');
+}
+
+app.get('/api/todos/all', (req, res) => {
+  const watchPaths = config.getWatchPaths();
+  const allTodos = [];
+
+  for (const dir of watchPaths) {
+    const sourceName = path.basename(path.resolve(dir, '..', '..')) || path.basename(dir);
+    const todos = readTodos(dir);
+    for (const todo of todos) {
+      allTodos.push({ ...todo, sourceName, sourceFolder: dir });
+    }
+  }
+
+  allTodos.sort((a, b) => {
+    const da = a.dueDate ? new Date(a.dueDate) : new Date('9999-12-31');
+    const db = b.dueDate ? new Date(b.dueDate) : new Date('9999-12-31');
+    return da - db;
+  });
+
+  res.json({ todos: allTodos });
+});
+
+app.get('/api/todos', (req, res) => {
+  const sourceFolder = req.query.source;
+  if (!isValidSourceFolder(sourceFolder)) {
+    return res.status(400).json({ error: 'Invalid source folder' });
+  }
+
+  const todos = readTodos(sourceFolder);
+  res.json({ todos });
+});
+
+app.post('/api/todos', (req, res) => {
+  const sourceFolder = req.query.source;
+  if (!isValidSourceFolder(sourceFolder)) {
+    return res.status(400).json({ error: 'Invalid source folder' });
+  }
+
+  const { text, dueDate, priority } = req.body;
+  if (!text || !text.trim()) {
+    return res.status(400).json({ error: 'Todo text is required' });
+  }
+
+  const todos = readTodos(sourceFolder);
+  const newTodo = {
+    id: `todo_${Date.now()}`,
+    text: text.trim(),
+    dueDate: dueDate || null,
+    completedAt: null,
+    priority: priority || 'medium',
+    status: 'pending',
+  };
+  todos.push(newTodo);
+  writeTodos(sourceFolder, todos);
+
+  notifyClients();
+  res.json({ success: true, todo: newTodo });
+});
+
+app.patch('/api/todos/:id', (req, res) => {
+  const sourceFolder = req.query.source;
+  if (!isValidSourceFolder(sourceFolder)) {
+    return res.status(400).json({ error: 'Invalid source folder' });
+  }
+
+  const todos = readTodos(sourceFolder);
+  const todo = todos.find(t => t.id === req.params.id);
+  if (!todo) {
+    return res.status(404).json({ error: 'Todo not found' });
+  }
+
+  const { text, dueDate, priority, status, completedAt } = req.body;
+  if (text !== undefined) todo.text = text;
+  if (dueDate !== undefined) todo.dueDate = dueDate;
+  if (priority !== undefined) todo.priority = priority;
+  if (status !== undefined) todo.status = status;
+  if (completedAt !== undefined) todo.completedAt = completedAt;
+
+  // Auto-set completedAt when marking as completed
+  if (status === 'completed' && !todo.completedAt) {
+    todo.completedAt = new Date().toISOString();
+  }
+
+  writeTodos(sourceFolder, todos);
+  notifyClients();
+  res.json({ success: true, todo });
+});
+
+app.delete('/api/todos/:id', (req, res) => {
+  const sourceFolder = req.query.source;
+  if (!isValidSourceFolder(sourceFolder)) {
+    return res.status(400).json({ error: 'Invalid source folder' });
+  }
+
+  let todos = readTodos(sourceFolder);
+  const index = todos.findIndex(t => t.id === req.params.id);
+  if (index === -1) {
+    return res.status(404).json({ error: 'Todo not found' });
+  }
+
+  todos.splice(index, 1);
+  writeTodos(sourceFolder, todos);
+  notifyClients();
+  res.json({ success: true });
+});
+
 // --- Notes API ---
 function isValidSourceFolder(sourceFolder) {
   if (!sourceFolder) return false;
