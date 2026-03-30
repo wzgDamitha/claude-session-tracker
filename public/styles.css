@@ -2179,3 +2179,318 @@ main {
   main { padding: 24px 20px; }
   .filters { flex-wrap: wrap; }
 }
+
+/* ===== TODOS ===== */
+.todo-section {
+  border: 1px solid var(--border);
+  margin-top: 24px;
+  margin-bottom: 32px;
+}
+
+.todo-header {
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.todo-count {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-tertiary);
+}
+
+.todo-list {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.todo-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.todo-item:last-child { border-bottom: none; }
+
+.todo-item.todo-completed {
+  opacity: 0.4;
+}
+
+.todo-item.todo-overdue {
+  border-left: 2px solid var(--red);
+}
+
+.todo-check {
+  background: none;
+  border: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0;
+  width: 20px;
+  flex-shrink: 0;
+}
+
+.todo-check:hover { color: var(--accent); }
+
+.todo-completed .todo-check { color: var(--accent); }
+
+.todo-content {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.todo-text {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.todo-completed .todo-text {
+  text-decoration: line-through;
+}
+
+.todo-due {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.todo-due.overdue {
+  color: var(--red);
+  font-weight: 700;
+}
+
+.todo-delete {
+  background: none;
+  border: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  font-size: 16px;
+  padding: 0 4px;
+  opacity: 0;
+  transition: var(--transition);
+}
+
+.todo-item:hover .todo-delete { opacity: 1; }
+.todo-delete:hover { color: var(--red); }
+
+.todo-form {
+  display: flex;
+  gap: 0;
+  padding: 12px 20px;
+  border-top: 1px solid var(--border);
+}
+
+.todo-form input[type="text"] {
+  flex: 1;
+  background: transparent;
+  border: 1px solid var(--border);
+  padding: 8px 12px;
+  font-family: var(--font-primary);
+  font-size: 13px;
+  color: var(--text-primary);
+  outline: none;
+}
+
+.todo-form input[type="text"]:focus {
+  border-color: var(--accent);
+}
+
+.todo-form input[type="datetime-local"] {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  padding: 8px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  margin-left: -1px;
+}
+
+.todo-form select {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  padding: 8px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  margin-left: -1px;
+  cursor: pointer;
+}
+
+.todo-form button {
+  background: var(--accent);
+  color: #0a0a0a;
+  border: 1px solid var(--accent);
+  padding: 8px 20px;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-left: -1px;
+  white-space: nowrap;
+}
+
+.todo-form button:hover {
+  background: var(--accent-hover);
+}
+
+/* ===== CALENDAR VIEW ===== */
+.calendar-container {
+  max-width: var(--layout-max-width, 100%);
+  margin: 0 auto;
+}
+
+.calendar-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.calendar-nav {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 6px 12px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  transition: var(--transition);
+}
+
+.calendar-nav:hover {
+  color: var(--accent);
+  border-color: var(--accent-border);
+}
+
+.calendar-month {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  min-width: 200px;
+  text-align: center;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  border: 1px solid var(--border);
+}
+
+.calendar-day-header {
+  padding: 8px;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-secondary);
+}
+
+.calendar-cell {
+  min-height: 80px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.calendar-cell:nth-child(7n) { border-right: none; }
+
+.calendar-cell:hover {
+  background: var(--bg-secondary);
+}
+
+.calendar-cell.today {
+  background: var(--accent-dim);
+}
+
+.calendar-cell.other-month {
+  opacity: 0.3;
+}
+
+.calendar-cell.selected {
+  outline: 1px solid var(--accent);
+  outline-offset: -1px;
+}
+
+.calendar-date {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.calendar-cell.today .calendar-date {
+  color: var(--accent);
+}
+
+.calendar-dots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+
+.calendar-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.calendar-dot.dot-pending { background: var(--accent); }
+.calendar-dot.dot-completed { background: var(--green, #22c55e); }
+.calendar-dot.dot-overdue { background: var(--red); }
+
+.calendar-day-detail {
+  margin-top: 24px;
+  border: 1px solid var(--border);
+  padding: 20px;
+}
+
+.calendar-day-detail h3 {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 16px;
+}
+
+.calendar-todo-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+
+.calendar-todo-item:last-child { border-bottom: none; }
+
+.calendar-todo-source {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--purple);
+  border: 1px solid rgba(167,139,250,0.25);
+  padding: 1px 6px;
+  text-transform: uppercase;
+}

@@ -6,6 +6,9 @@ let searchQuery = '';
 let currentConfig = null;
 
 const PRIORITY_ORDER = { critical: 0, high: 1, medium: 2, low: 3, none: 4 };
+let calendarDate = null;
+let calendarTodos = [];
+let calendarSelectedDay = null;
 const VC_GIT_ICON = '<svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M5.45 5.154A4.25 4.25 0 0 0 9.25 7.5h1.378a2.251 2.251 0 1 1 0 1.5H9.25A5.734 5.734 0 0 1 5 7.123v3.505a2.25 2.25 0 1 1-1.5 0V5.372a2.25 2.25 0 1 1 1.95-.218ZM4.25 13.5a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Zm8.5-4.5a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5ZM5 3.25a.75.75 0 1 0-1.5 0 .75.75 0 0 0 1.5 0Z"/></svg>';
 const VC_CLOUD_ICON = '<svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M4.5 12a3.5 3.5 0 0 1-.95-6.87A5.002 5.002 0 0 1 13.35 6.1 3.001 3.001 0 0 1 13 12H4.5ZM8 2a4 4 0 0 0-3.83 2.82A2.5 2.5 0 0 0 4.5 11H13a2 2 0 1 0-.22-3.99A4.001 4.001 0 0 0 8 2Z"/></svg>';
 const VC_FOLDER_ICON = '<svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M1.75 1A1.75 1.75 0 0 0 0 2.75v10.5C0 14.216.784 15 1.75 15h12.5A1.75 1.75 0 0 0 16 13.25v-8.5A1.75 1.75 0 0 0 14.25 3H7.5a.25.25 0 0 1-.2-.1l-.9-1.2C6.07 1.26 5.55 1 5 1H1.75Z"/></svg>';
@@ -321,7 +324,11 @@ function render() {
 
   emptyState.style.display = 'none';
 
-  if (currentView === 'timeline') {
+  if (currentView === 'calendar') {
+    grid.className = 'calendar-container';
+    renderCalendarView(grid);
+    return;
+  } else if (currentView === 'timeline') {
     grid.className = 'sessions-timeline';
     grid.innerHTML = timelineViewHTML(filtered);
     grid.querySelectorAll('.timeline-row').forEach(row => {
@@ -727,6 +734,27 @@ function openDetail(s) {
         ${sessionHistoryHTML}
       </div>
     </div>
+    <div class="todo-section" id="todo-section">
+      <div class="todo-header">
+        <span class="user-notes-title">// Todos</span>
+        <span class="todo-count" id="todo-count"></span>
+      </div>
+      <div class="todo-list" id="todo-list">
+        <div class="user-notes-empty">Loading...</div>
+      </div>
+      <div class="todo-form" id="todo-form">
+        <input type="text" id="todo-text" placeholder="Add a todo...">
+        <input type="datetime-local" id="todo-due">
+        <select id="todo-priority">
+          <option value="none">—</option>
+          <option value="low">Low</option>
+          <option value="medium">Medium</option>
+          <option value="high" selected>High</option>
+          <option value="critical">Critical</option>
+        </select>
+        <button id="todo-add-btn">Add</button>
+      </div>
+    </div>
     <div class="user-notes" id="user-notes" data-source="${escapeHtml(s.sourceFolder)}">
       <div class="user-notes-header">
         <span class="user-notes-title">// Notes</span>
@@ -789,6 +817,17 @@ function openDetail(s) {
   notesSubmit.addEventListener('click', () => postNote(s.sourceFolder));
   notesInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) postNote(s.sourceFolder);
+  });
+
+  // Load todos
+  loadTodos(s.sourceFolder);
+
+  // Wire up todo add button
+  const todoAddBtn = document.getElementById('todo-add-btn');
+  const todoTextInput = document.getElementById('todo-text');
+  todoAddBtn.addEventListener('click', () => postTodo(s.sourceFolder));
+  todoTextInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') postTodo(s.sourceFolder);
   });
 }
 
@@ -936,6 +975,304 @@ async function postNote(sourceFolder) {
     btn.disabled = false;
     btn.textContent = 'Post';
   }
+}
+
+// --- Todos ---
+function todoCountdown(dueDate) {
+  if (!dueDate) return '';
+  const now = Date.now();
+  const due = new Date(dueDate).getTime();
+  const diff = due - now;
+  if (diff < 0) return 'overdue';
+  const mins = Math.floor(diff / 60000);
+  const hrs = Math.floor(mins / 60);
+  const days = Math.floor(hrs / 24);
+  if (days > 14) return `${Math.floor(days / 7)}w`;
+  if (days > 1) return `${days}d`;
+  if (hrs > 1) return `${hrs}h`;
+  return `${mins}m`;
+}
+
+async function loadTodos(sourceFolder) {
+  const listEl = document.getElementById('todo-list');
+  const countEl = document.getElementById('todo-count');
+  try {
+    const res = await fetch(`/api/todos?source=${encodeURIComponent(sourceFolder)}`);
+    const data = await res.json();
+    const todos = data.todos || [];
+
+    if (todos.length === 0) {
+      listEl.innerHTML = '<div class="user-notes-empty">No todos yet.</div>';
+      countEl.textContent = '';
+      return;
+    }
+
+    const pending = todos.filter(t => t.status !== 'completed');
+    const completed = todos.filter(t => t.status === 'completed');
+
+    // Sort pending: overdue first, then by due date
+    pending.sort((a, b) => {
+      const aDue = a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
+      const bDue = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
+      return aDue - bDue;
+    });
+
+    const allSorted = [...pending, ...completed];
+    const pendingCount = pending.length;
+    const totalCount = todos.length;
+    countEl.textContent = `${pendingCount} pending / ${totalCount} total`;
+
+    listEl.innerHTML = allSorted.map(todo => {
+      const isCompleted = todo.status === 'completed';
+      const isOverdue = !isCompleted && todo.dueDate && new Date(todo.dueDate).getTime() < Date.now();
+      const countdown = todoCountdown(todo.dueDate);
+      const pCfg = PRIORITY_CONFIG[todo.priority || 'none'];
+      const priorityBadge = pCfg && pCfg.label ? `<span style="font-family:var(--font-mono);font-size:10px;color:var(${pCfg.color})">${pCfg.label}</span>` : '';
+
+      return `
+        <div class="todo-item ${isOverdue ? 'todo-overdue' : ''} ${isCompleted ? 'todo-completed' : ''}">
+          <button class="todo-check" data-id="${escapeHtml(todo.id)}" data-source="${escapeHtml(sourceFolder)}">
+            ${isCompleted ? '\u2713' : '\u25CB'}
+          </button>
+          <div class="todo-content">
+            <span class="todo-text">${escapeHtml(todo.text)}</span>
+            ${todo.dueDate ? `<span class="todo-due ${isOverdue ? 'overdue' : ''}">${countdown}</span>` : ''}
+          </div>
+          ${priorityBadge}
+          <button class="todo-delete" data-id="${escapeHtml(todo.id)}" data-source="${escapeHtml(sourceFolder)}">&times;</button>
+        </div>`;
+    }).join('');
+
+    // Wire up check buttons
+    listEl.querySelectorAll('.todo-check').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = btn.dataset.id;
+        const src = btn.dataset.source;
+        const todo = allSorted.find(t => t.id === id);
+        const newStatus = todo && todo.status === 'completed' ? 'pending' : 'completed';
+        await fetch(`/api/todos/${encodeURIComponent(id)}?source=${encodeURIComponent(src)}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: newStatus }),
+        });
+        loadTodos(sourceFolder);
+      });
+    });
+
+    // Wire up delete buttons
+    listEl.querySelectorAll('.todo-delete').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = btn.dataset.id;
+        const src = btn.dataset.source;
+        await fetch(`/api/todos/${encodeURIComponent(id)}?source=${encodeURIComponent(src)}`, {
+          method: 'DELETE',
+        });
+        loadTodos(sourceFolder);
+      });
+    });
+  } catch (err) {
+    listEl.innerHTML = '<div class="user-notes-empty" style="color:var(--red)">Failed to load todos</div>';
+    console.error('Failed to load todos:', err);
+  }
+}
+
+async function postTodo(sourceFolder) {
+  const textInput = document.getElementById('todo-text');
+  const dueInput = document.getElementById('todo-due');
+  const priorityInput = document.getElementById('todo-priority');
+  const addBtn = document.getElementById('todo-add-btn');
+  const text = textInput.value.trim();
+  if (!text) return;
+
+  addBtn.disabled = true;
+  addBtn.textContent = '...';
+  try {
+    await fetch(`/api/todos?source=${encodeURIComponent(sourceFolder)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text,
+        dueDate: dueInput.value || null,
+        priority: priorityInput.value,
+      }),
+    });
+    textInput.value = '';
+    dueInput.value = '';
+    await loadTodos(sourceFolder);
+  } catch (err) {
+    console.error('Failed to post todo:', err);
+  } finally {
+    addBtn.disabled = false;
+    addBtn.textContent = 'Add';
+  }
+}
+
+// --- Calendar View ---
+async function renderCalendarView(container) {
+  // Fetch all todos across all projects
+  try {
+    const res = await fetch('/api/todos/all');
+    const data = await res.json();
+    calendarTodos = data.todos || [];
+  } catch (err) {
+    calendarTodos = [];
+    console.error('Failed to fetch all todos:', err);
+  }
+
+  const now = calendarDate || new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+
+  const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const dayNames = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+
+  // First day of month and days in month
+  const firstDay = new Date(year, month, 1);
+  const lastDay = new Date(year, month + 1, 0);
+  const daysInMonth = lastDay.getDate();
+
+  // Day of week for first day (0=Sun, adjust so Mon=0)
+  let startDow = firstDay.getDay() - 1;
+  if (startDow < 0) startDow = 6;
+
+  // Days from previous month to fill
+  const prevMonthLast = new Date(year, month, 0).getDate();
+
+  const today = new Date();
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+
+  // Build day cells
+  let cellsHTML = '';
+  const totalCells = Math.ceil((startDow + daysInMonth) / 7) * 7;
+
+  for (let i = 0; i < totalCells; i++) {
+    let dayNum, dateStr, isOtherMonth = false;
+    if (i < startDow) {
+      // Previous month
+      dayNum = prevMonthLast - startDow + i + 1;
+      const pm = month === 0 ? 11 : month - 1;
+      const py = month === 0 ? year - 1 : year;
+      dateStr = `${py}-${String(pm+1).padStart(2,'0')}-${String(dayNum).padStart(2,'0')}`;
+      isOtherMonth = true;
+    } else if (i - startDow >= daysInMonth) {
+      // Next month
+      dayNum = i - startDow - daysInMonth + 1;
+      const nm = month === 11 ? 0 : month + 1;
+      const ny = month === 11 ? year + 1 : year;
+      dateStr = `${ny}-${String(nm+1).padStart(2,'0')}-${String(dayNum).padStart(2,'0')}`;
+      isOtherMonth = true;
+    } else {
+      dayNum = i - startDow + 1;
+      dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(dayNum).padStart(2,'0')}`;
+    }
+
+    const isToday = dateStr === todayStr;
+    const isSelected = calendarSelectedDay === dateStr;
+
+    // Find todos for this date
+    const dayTodos = calendarTodos.filter(t => {
+      if (!t.dueDate) return false;
+      const dStr = t.dueDate.substring(0, 10);
+      return dStr === dateStr;
+    });
+
+    const dotsHTML = dayTodos.map(t => {
+      const isCompleted = t.status === 'completed';
+      const isOverdue = !isCompleted && new Date(t.dueDate).getTime() < Date.now();
+      const cls = isCompleted ? 'dot-completed' : (isOverdue ? 'dot-overdue' : 'dot-pending');
+      return `<div class="calendar-dot ${cls}"></div>`;
+    }).join('');
+
+    cellsHTML += `
+      <div class="calendar-cell ${isToday ? 'today' : ''} ${isOtherMonth ? 'other-month' : ''} ${isSelected ? 'selected' : ''}" data-date="${dateStr}">
+        <div class="calendar-date">${dayNum}</div>
+        <div class="calendar-dots">${dotsHTML}</div>
+      </div>`;
+  }
+
+  container.innerHTML = `
+    <div class="calendar-header">
+      <button class="calendar-nav" id="cal-prev">\u25C0</button>
+      <div class="calendar-month">${monthNames[month]} ${year}</div>
+      <button class="calendar-nav" id="cal-next">\u25B6</button>
+    </div>
+    <div class="calendar-grid">
+      ${dayNames.map(d => `<div class="calendar-day-header">${d}</div>`).join('')}
+      ${cellsHTML}
+    </div>
+    <div id="calendar-day-detail"></div>
+  `;
+
+  // If a day is selected, show its detail
+  if (calendarSelectedDay) {
+    renderCalendarDayDetail(calendarSelectedDay);
+  }
+
+  // Wire up nav
+  document.getElementById('cal-prev').addEventListener('click', () => {
+    calendarDate = new Date(year, month - 1, 1);
+    calendarSelectedDay = null;
+    render();
+  });
+  document.getElementById('cal-next').addEventListener('click', () => {
+    calendarDate = new Date(year, month + 1, 1);
+    calendarSelectedDay = null;
+    render();
+  });
+
+  // Wire up cell clicks
+  container.querySelectorAll('.calendar-cell').forEach(cell => {
+    cell.addEventListener('click', () => {
+      calendarSelectedDay = cell.dataset.date;
+      // Update selected state visually
+      container.querySelectorAll('.calendar-cell').forEach(c => c.classList.remove('selected'));
+      cell.classList.add('selected');
+      renderCalendarDayDetail(calendarSelectedDay);
+    });
+  });
+}
+
+function renderCalendarDayDetail(dateStr) {
+  const detailEl = document.getElementById('calendar-day-detail');
+  if (!detailEl) return;
+
+  const dayTodos = calendarTodos.filter(t => {
+    if (!t.dueDate) return false;
+    return t.dueDate.substring(0, 10) === dateStr;
+  });
+
+  if (dayTodos.length === 0) {
+    detailEl.innerHTML = `
+      <div class="calendar-day-detail">
+        <h3>${dateStr}</h3>
+        <div class="user-notes-empty">No todos on this day.</div>
+      </div>`;
+    return;
+  }
+
+  const itemsHTML = dayTodos.map(t => {
+    const isCompleted = t.status === 'completed';
+    const isOverdue = !isCompleted && new Date(t.dueDate).getTime() < Date.now();
+    const statusIcon = isCompleted ? '\u2713' : (isOverdue ? '\u25CF' : '\u25CB');
+    const statusColor = isCompleted ? 'var(--accent)' : (isOverdue ? 'var(--red)' : 'var(--text-tertiary)');
+    const pCfg = PRIORITY_CONFIG[t.priority || 'none'];
+    const priorityBadge = pCfg && pCfg.label ? `<span style="font-family:var(--font-mono);font-size:10px;color:var(${pCfg.color})">${pCfg.label}</span>` : '';
+    const sourceName = t.sourceName || t.source || '';
+
+    return `
+      <div class="calendar-todo-item" style="${isCompleted ? 'opacity:0.4;text-decoration:line-through' : ''} ${isOverdue ? 'color:var(--red)' : ''}">
+        <span style="color:${statusColor};font-size:14px">${statusIcon}</span>
+        <span style="flex:1;color:var(--text-secondary)">${escapeHtml(t.text)}</span>
+        ${priorityBadge}
+        ${sourceName ? `<span class="calendar-todo-source">${escapeHtml(sourceName)}</span>` : ''}
+      </div>`;
+  }).join('');
+
+  detailEl.innerHTML = `
+    <div class="calendar-day-detail">
+      <h3>${dateStr} — ${dayTodos.length} todo${dayTodos.length > 1 ? 's' : ''}</h3>
+      ${itemsHTML}
+    </div>`;
 }
 
 function closeModal(overlay) { overlay.classList.remove('open'); }
