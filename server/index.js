@@ -6,6 +6,12 @@ const { marked } = require('marked');
 const chokidar = require('chokidar');
 const config = require('./config');
 
+const IS_MAC = process.platform === 'darwin';
+function pathStartsWith(child, parent) {
+  if (IS_MAC) return child.toLowerCase().startsWith(parent.toLowerCase());
+  return child.startsWith(parent);
+}
+
 const app = express();
 app.use(express.json());
 
@@ -413,7 +419,7 @@ app.get('/api/sessions/:file', (req, res) => {
     const filePath = path.join(resolved, req.params.file);
 
     // Path traversal protection
-    if (!filePath.startsWith(resolved)) continue;
+    if (!pathStartsWith(filePath, resolved)) continue;
     if (!fs.existsSync(filePath)) continue;
 
     try {
@@ -436,7 +442,7 @@ app.patch('/api/sessions/:file', (req, res) => {
   for (const dir of searchPaths) {
     const resolved = path.resolve(dir);
     const filePath = path.join(resolved, req.params.file);
-    if (!filePath.startsWith(resolved)) continue;
+    if (!pathStartsWith(filePath, resolved)) continue;
     if (!fs.existsSync(filePath)) continue;
 
     try {
@@ -622,7 +628,10 @@ app.delete('/api/todos/:id', (req, res) => {
 function isValidSourceFolder(sourceFolder) {
   if (!sourceFolder) return false;
   const resolved = path.resolve(sourceFolder);
-  return config.getWatchPaths().some(p => resolved === path.resolve(p) || resolved.startsWith(path.resolve(p)));
+  return config.getWatchPaths().some(p => {
+    const rp = path.resolve(p);
+    return resolved === rp || pathStartsWith(resolved, rp);
+  });
 }
 
 function parseNotes(content) {

@@ -42,14 +42,14 @@
 
         <div id="wizard-shared" class="hidden">
           <label class="wizard-label">Shared sessions folder path:</label>
-          <input type="text" id="wizard-shared-input" class="wizard-input" placeholder="e.g. F:\Future\Claude Project Tracker\.claude\sessions">
+          <input type="text" id="wizard-shared-input" class="wizard-input" placeholder="e.g. /Users/you/.claude/sessions or C:\Projects\.claude\sessions">
           <p class="wizard-hint">All agents will write session files here. The folder will be created if it doesn't exist.</p>
         </div>
 
         <div id="wizard-individual" class="hidden">
           <label class="wizard-label">Auto-discover projects:</label>
           <div class="wizard-folder-add">
-            <input type="text" id="wizard-discover-input" class="wizard-input" placeholder="e.g. F:\Future (root folder containing your projects)">
+            <input type="text" id="wizard-discover-input" class="wizard-input" placeholder="e.g. /Users/you/Projects or C:\Projects">
             <button class="wizard-add-btn" id="wizard-discover-add-root">Add</button>
             <button class="wizard-add-btn" id="wizard-discover-btn">Scan All</button>
           </div>
@@ -68,7 +68,7 @@
 
           <label class="wizard-label">Add session folder paths:</label>
           <div class="wizard-folder-add">
-            <input type="text" id="wizard-folder-input" class="wizard-input" placeholder="e.g. C:\Projects\my-app\.claude\sessions">
+            <input type="text" id="wizard-folder-input" class="wizard-input" placeholder="e.g. /Users/you/my-app/.claude/sessions or C:\Projects\my-app\.claude\sessions">
             <button class="wizard-add-btn" id="wizard-add-btn">Add</button>
           </div>
           <ul class="wizard-folder-list" id="wizard-folder-list"></ul>

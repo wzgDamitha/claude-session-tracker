@@ -224,6 +224,13 @@ wizardSaveBtn.addEventListener('click', async () => {
     if (!folder) { showWizardError('Please enter a folder path.'); return; }
     body.sharedFolder = folder;
   } else {
+    // Auto-add any typed but un-added folder path
+    const pendingFolder = wizardFolderInput.value.trim();
+    if (pendingFolder && !wizardFolders.includes(pendingFolder)) {
+      wizardFolders.push(pendingFolder);
+      wizardFolderInput.value = '';
+      renderWizardFolders();
+    }
     if (wizardFolders.length === 0) { showWizardError('Please add at least one folder.'); return; }
     body.watchFolders = wizardFolders;
     body.discoverRoots = wizardDiscoverRoots;
