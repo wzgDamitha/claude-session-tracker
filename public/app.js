@@ -1268,7 +1268,7 @@ function renderCalendarDayDetail(dateStr) {
 
     return `
       <div class="calendar-todo-item" style="${isCompleted ? 'opacity:0.4;text-decoration:line-through' : ''} ${isOverdue ? 'color:var(--red)' : ''}">
-        <span style="color:${statusColor};font-size:14px">${statusIcon}</span>
+        <button class="todo-check cal-todo-check" data-id="${escapeHtml(t.id)}" data-source="${escapeHtml(t.sourceFolder)}" style="color:${statusColor};font-size:14px;background:none;border:none;cursor:pointer;padding:0">${statusIcon}</button>
         <span style="flex:1;color:var(--text-secondary)">${escapeHtml(t.text)}</span>
         ${priorityBadge}
         ${sourceName ? `<span class="calendar-todo-source">${escapeHtml(sourceName)}</span>` : ''}
@@ -1280,6 +1280,28 @@ function renderCalendarDayDetail(dateStr) {
       <h3>${dateStr} — ${dayTodos.length} todo${dayTodos.length > 1 ? 's' : ''}</h3>
       ${itemsHTML}
     </div>`;
+
+  // Wire up calendar todo check buttons
+  detailEl.querySelectorAll('.cal-todo-check').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.dataset.id;
+      const src = btn.dataset.source;
+      const todo = calendarTodos.find(t => t.id === id);
+      const newStatus = todo && todo.status === 'completed' ? 'pending' : 'completed';
+      await fetch(`/api/todos/${encodeURIComponent(id)}?source=${encodeURIComponent(src)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      // Refresh calendar todos and re-render
+      try {
+        const res = await fetch('/api/todos/all');
+        const data = await res.json();
+        calendarTodos = data.todos || [];
+      } catch {}
+      renderCalendarDayDetail(dateStr);
+    });
+  });
 }
 
 function closeModal(overlay) { overlay.classList.remove('open'); }
